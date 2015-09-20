@@ -24,7 +24,6 @@ import Agda.Syntax.Common
 import Agda.Syntax.Internal as I
 import Agda.Syntax.Position
 
-import qualified Agda.Compiler.JS.Parser as JS
 import qualified Agda.Compiler.UHC.Pragmas.Base as CR
 
 import Agda.TypeChecking.Monad.Base
@@ -92,65 +91,29 @@ addClauses q cls = do
   tel <- getContextTelescope
   modifyFunClauses q (++ abstract tel cls)
 
-ensureNoCompiledHaskell :: QName -> TCM ()
-ensureNoCompiledHaskell q =
-  whenM (isJust . compiledHaskell . defCompiledRep <$> getConstInfo q) $
-    typeError $ GenericError $ "Multiple Haskell bindings for " ++ show q ++ ". " ++
-                               "Note that builtin natural numbers and booleans don't need " ++
-                               "COMPILED pragmas."
+addFFIFunImport :: QName -> CompileTarget -> FFIFunImport' -> TCM ()
+addFFIFunImport q w bnd = modifySignature $ updateDefinition q $ updateDefCompiledRep f
+  where f (FFIFunImport m) = FFIFunImport $ Map.insert w bnd m
+        f (FFINoBind)      = FFIFunImport $ Map.singleton w bnd
+        f _                = __IMPOSSIBLE__
 
-addHaskellCode :: QName -> HaskellType -> HaskellCode -> TCM ()
-addHaskellCode q hsTy hsDef = do
-  ensureNoCompiledHaskell q
-  modifySignature $ updateDefinition q $ updateDefCompiledRep $ addHs
-  where
-    addHs crep = crep { compiledHaskell = Just $ HsDefn hsTy hsDef }
+addFFITypeBind :: QName -> FFIWay -> FFITypeBind' -> TCM ()
+addFFITypeBind q w bnd = modifySignature $ updateDefinition q $ updateDefCompiledRep f
+  where f (FFITypeBind m)  = FFITypeBind $ Map.insert w bnd m
+        f (FFINoBind)      = FFITypeBind $ Map.singleton w bnd
+        f _                = __IMPOSSIBLE__
 
-addHaskellExport :: QName -> HaskellType -> String -> TCM ()
-addHaskellExport q hsTy hsName = do
-  ensureNoCompiledHaskell q
-  modifySignature $ updateDefinition q $ updateDefCompiledRep $ addHs
-  where
-    addHs crep = crep { exportHaskell = Just (HsExport hsTy hsName)}
+addFFIFunExport :: QName -> FFIWay -> FFIFunExport' -> TCM ()
+addFFIFunExport q w bnd = modifySignature $ updateDefinition q $ updateDefCompiledRep f
+  where f (FFIFunExport m) = FFIFunExport $ Map.insert w bnd m
+        f (FFINoBind)      = FFIFunExport $ Map.singleton w bnd
+        f _                = __IMPOSSIBLE__
 
-addHaskellType :: QName -> HaskellType -> TCM ()
-addHaskellType q hsTy = do
-  ensureNoCompiledHaskell q
-  modifySignature $ updateDefinition q $ updateDefCompiledRep $ addHs
-  where
-    addHs crep = crep { compiledHaskell = Just $ HsType hsTy }
-
-addEpicCode :: QName -> EpicCode -> TCM ()
-addEpicCode q epDef = modifySignature $ updateDefinition q $ updateDefCompiledRep $ addEp
-  -- TODO: sanity checking
-  where
-    addEp crep = crep { compiledEpic = Just epDef }
-
-addJSCode :: QName -> String -> TCM ()
-addJSCode q jsDef =
-  case JS.parse jsDef of
-    Left e ->
-      modifySignature $ updateDefinition q $ updateDefCompiledRep $ addJS (Just e)
-    Right s ->
-      typeError (CompilationError ("Failed to parse ECMAScript (..." ++ s ++ ") for " ++ show q))
-  where
-    addJS e crep = crep { compiledJS = e }
-
-addCoreCode :: QName -> CR.CoreExpr -> TCM ()
-addCoreCode q crDef =  modifySignature $ updateDefinition q $ updateDefCompiledRep $ addCore crDef
-  where
-    addCore e crep = crep { compiledCore = Just $ CrDefn e }
-
-addCoreConstr :: QName -> CR.CoreConstr -> TCM ()
-addCoreConstr q con = modifySignature $ updateDefinition q $ updateDefCompiledRep $ addCore
-  where
-    addCore crep = crep {compiledCore = Just $ CrConstr con }
-
-addCoreType :: QName -> CR.CoreType -> TCM ()
-addCoreType q crTy = modifySignature $ updateDefinition q $ updateDefCompiledRep $ addCr
-  -- TODO: sanity checking
-  where
-    addCr crep = crep { compiledCore = Just $ CrType crTy }
+addFFIConBind :: QName -> FFIWay -> FFIConBind' -> TCM ()
+addFFIConBind q w bnd = modifySignature $ updateDefinition q $ updateDefCompiledRep f
+  where f (FFIConBind m)   = FFIConBind $ Map.insert w bnd m
+        f (FFINoBind)      = FFIConBind $ Map.singleton w bnd
+        f _                = __IMPOSSIBLE__
 
 markNoSmashing :: QName -> TCM ()
 markNoSmashing q = modifySignature $ updateDefinition q $ mark

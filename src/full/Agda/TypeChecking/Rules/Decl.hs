@@ -20,6 +20,7 @@ import Data.Sequence ((|>))
 
 import Agda.Compiler.HaskellTypes
 import Agda.Compiler.UHC.Pragmas.Parse
+import qualified Agda.Compiler.JS.Parser as JS
 import Agda.Interaction.Options
 import Agda.Interaction.Highlighting.Generate
 
@@ -62,8 +63,10 @@ import Agda.TypeChecking.Rules.Record  ( checkRecDef )
 import Agda.TypeChecking.Rules.Def     ( checkFunDef, useTerPragma )
 import Agda.TypeChecking.Rules.Builtin
 import Agda.TypeChecking.Rules.Display ( checkDisplayPragma )
+import qualified Agda.TypeChecking.Rules.FFI as FFI
 
 import Agda.Termination.TermCheck
+
 
 import qualified Agda.Utils.HashMap as HMap
 import Agda.Utils.Maybe
@@ -541,15 +544,15 @@ checkPragma r p =
               "COMPILED_DECLARE_DATA directives must appear in the same module " ++
               "as their corresponding datatype definition,"
           case theDef def of
-            Datatype{} -> addHaskellType x hs
+            Datatype{} -> addFFITypeBind x Way_MAZ_HS (TyBind_MAZ_HS hs)
             Axiom{}    -> -- possible when the data type has only been declared yet
-              addHaskellType x hs
+              addFFITypeBind x Way_MAZ_HS (TyBind_MAZ_HS hs)
             _          -> typeError $ GenericError
                           "COMPILED_DECLARE_DATA directive only works on data types"
         A.CompiledTypePragma x hs -> do
           def <- getConstInfo x
           case theDef def of
-            Axiom{} -> addHaskellType x hs
+            Axiom{} -> addFFITypeBind x Way_MAZ_HS (TyBind_MAZ_HS hs)
             _       -> typeError $ GenericError
                         "COMPILED_TYPE directive only works on postulates"
         A.CompiledDataPragma x hs hcs -> do
@@ -560,7 +563,7 @@ checkPragma r p =
               "COMPILED_DATA directives must appear in the same module " ++
               "as their corresponding datatype definition,"
           let addCompiledData cs = do
-                addHaskellType x hs
+                addFFITypeBind x Way_MAZ_HS (TyBind_MAZ_HS hs)
                 let computeHaskellType c = do
                       def <- getConstInfo c
                       let Constructor{ conPars = np } = theDef def
@@ -574,8 +577,9 @@ checkPragma r p =
                       ty <- underPars np $ defType def
                       reportSLn "tc.pragma.compile" 10 $ "Haskell type for " ++ show c ++ ": " ++ ty
                       return ty
+                    addHaskellCon = \c ht hc -> addFFIConBind c Way_MAZ_HS (ConBind_MAZ_HS ht hc)
                 hts <- mapM computeHaskellType cs
-                sequence_ $ zipWith3 addHaskellCode cs hts hcs
+                sequence_ $ zipWith3 addHaskellCon cs hts hcs
           case theDef def of
             Datatype{dataCons = cs}
               | length cs /= length hcs -> do
@@ -601,9 +605,7 @@ checkPragma r p =
           def <- getConstInfo x
           case theDef def of
             Axiom{} -> do
-              ty <- haskellType $ defType def
-              reportSLn "tc.pragma.compile" 10 $ "Haskell type for " ++ show x ++ ": " ++ ty
-              addHaskellCode x ty hs
+              FFI.checkFFIFunImport x (defType def) (FFI.FunImp_MAZ_HS hs)
             _   -> typeError $ GenericError "COMPILED directive only works on postulates"
         A.CompiledExportPragma x hs -> do
           def <- getConstInfo x
@@ -619,23 +621,28 @@ checkPragma r p =
             then typeError $ GenericError "COMPILED_EXPORT directive only works on functions"
             else do
               ty <- haskellType $ defType def
-              addHaskellExport x ty hs
+              addFFIFunExport x Way_MAZ_HS (FunExp_MAZ_HS ty hs)
         A.CompiledEpicPragma x ep -> do
           def <- getConstInfo x
           case theDef def of
             Axiom{} -> do
-              --ty <- haskellType $ defType def
-              --reportSLn "tc.pragma.compile" 10 $ "Haskell type for " ++ show x ++ ": " ++ ty
-              addEpicCode x ep
+              reportSLn "tc.pragma.compile" 0 $ "COMPILED_EPIC pragmas are no longer supported, ignoring it."
             _   -> typeError $ GenericError "COMPILED_EPIC directive only works on postulates"
-        A.CompiledJSPragma x ep ->
-          addJSCode x ep
+        A.CompiledJSPragma x js -> do
+          case JS.parse js of
+            Left js' -> do
+              def <- getConstInfo x
+              case theDef def of
+                Axiom{}       -> FFI.checkFFIFunImport x (defType def) (FFI.FunImp_JS_JS js)
+                Datatype{}    -> addFFITypeBind x Way_JS_JS (TyBind_JS_JS js')
+                Constructor{} -> addFFIConBind x Way_JS_JS (ConBind_JS_JS js')
+                _ -> typeError $ GenericError "COMPILED_JS directive only works on postulates, datatypes and constructors"
+            Right s ->
+              typeError (CompilationError ("Failed to parse ECMAScript (..." ++ s ++ ") for " ++ show x))
         A.CompiledUHCPragma x cr -> do
           def <- getConstInfo x
           case theDef def of
-            Axiom{} -> case parseCoreExpr cr of
-                    Left msg -> typeError $ GenericError $ "Could not parse COMPILED_UHC pragma: " ++ msg
-                    Right cr -> addCoreCode x cr
+            Axiom{} -> FFI.checkFFIFunImport x (defType def) (FFI.FunImp_UHC_Core cr)
             _ -> typeError $ GenericError "COMPILED_UHC directive only works on postulates" -- only allow postulates for the time being
         A.CompiledDataUHCPragma x crd crcs -> do
           -- TODO mostly copy-paste from the CompiledDataPragma, should be refactored into a seperate function
@@ -664,7 +671,8 @@ checkPragma r p =
                 -- Remark: core pragmas are not type-checked
                 dt' <- parseCoreData crd
                 cons' <- parseCoreConstrs dt' crcs
-                addCoreType x dt'
+                addFFITypeBind x Way_UHC_Core (TyBind_UHC_Core dt')
+                let addCoreConstr = \c cc -> addFFIConBind c Way_UHC_Core (ConBind_UHC_Core cc)
                 sequence_ $ zipWith addCoreConstr cs cons'
             _ -> typeError $ GenericError "COMPILED_DATA_UHC on non datatype"
         A.NoSmashingPragma x -> do

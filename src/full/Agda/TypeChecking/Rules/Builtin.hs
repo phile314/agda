@@ -80,6 +80,13 @@ coreBuiltins = map (\ (x, z) -> BuiltinInfo x z)
   , (builtinString             |-> builtinPostulate tset)
   , (builtinQName              |-> builtinPostulate tset)
   , (builtinIO                 |-> builtinPostulate (tset --> tset))
+  , (builtinFFIFunImportSpec   |-> BuiltinRecord tset (replicate 3 tffifunimp))
+  , (builtinFFIFunImport       |-> BuiltinData tset [builtinFFIFunImport_MAZ_HS, builtinFFIFunImport_JS_JS
+                                                    , builtinFFIFunImport_UHC_Core])
+  , (builtinFFIFunImport_MAZ_HS   |-> BuiltinDataCons (tstring --> tffifunimp))
+  , (builtinFFIFunImport_JS_JS    |-> BuiltinDataCons (tstring --> tffifunimp))
+  , (builtinFFIFunImport_UHC_Core |-> BuiltinDataCons (tstring --> tffifunimp))
+  , (builtinFFIFunImport_RuntimeError |-> BuiltinDataCons tffifunimp)
   , (builtinAgdaSort           |-> BuiltinData tset [builtinAgdaSortSet, builtinAgdaSortLit, builtinAgdaSortUnsupported])
   , (builtinAgdaType           |-> BuiltinData tset [builtinAgdaTypeEl])
   , (builtinAgdaTerm           |-> BuiltinData tset
@@ -87,7 +94,7 @@ coreBuiltins = map (\ (x, z) -> BuiltinInfo x z)
                                      , builtinAgdaTermDef, builtinAgdaTermCon
                                      , builtinAgdaTermPi, builtinAgdaTermSort
                                      , builtinAgdaTermLit, builtinAgdaTermQuoteTerm, builtinAgdaTermQuoteGoal
-                                     , builtinAgdaTermQuoteContext, builtinAgdaTermUnquote
+                                     , builtinAgdaTermQuoteContext, builtinAgdaTermUnquote, builtinAgdaTermForeign
                                      , builtinAgdaTermUnsupported])
   , (builtinEquality           |-> BuiltinData (hPi "a" (el primLevel) $
                                                 hPi "A" (return $ sort $ varSort 0) $
@@ -124,6 +131,7 @@ coreBuiltins = map (\ (x, z) -> BuiltinInfo x z)
   , (builtinAgdaTermQuoteTerm    |-> BuiltinDataCons (tterm --> tterm))
   , (builtinAgdaTermQuoteContext |-> BuiltinDataCons tterm)
   , (builtinAgdaTermUnquote      |-> BuiltinDataCons (tterm --> targs --> tterm))
+  , (builtinAgdaTermForeign      |-> BuiltinDataCons (tterm --> ttype --> tterm))
   , (builtinAgdaTermUnsupported|-> BuiltinDataCons tterm)
   , (builtinAgdaLitNat    |-> BuiltinDataCons (tnat --> tliteral))
   , (builtinAgdaLitFloat  |-> BuiltinDataCons (tfloat --> tliteral))
@@ -207,6 +215,7 @@ coreBuiltins = map (\ (x, z) -> BuiltinInfo x z)
         tqname     = el primQName
         tsize      = El SizeUniv <$> primSize
         tbool      = el primBool
+        tffifunimp = el primFFIFunImport
         thiding    = el primHiding
         trelevance = el primRelevance
 --        tcolors    = el (list primAgdaTerm) -- TODO guilhem
@@ -358,6 +367,20 @@ inductiveCheck b n t = do
           _ -> err
       _ -> err
 
+recordCheck :: String -> Term -> TCM ()
+recordCheck b t = do
+  t <- etaContract =<< normalise t
+  case ignoreSharing t of
+    Def t _ -> do
+      t <- theDef <$> getConstInfo t
+      case t of
+        Record {} -> return ()
+        _ -> typeError $ GenericError $ unwords
+            [ "The builtin", b
+            , "must be a record type."]
+    _ -> error $ show t --__IMPOSSIBLE__
+
+
 -- | @bindPostulatedName builtin e m@ checks that @e@ is a postulated
 -- name @q@, and binds the builtin @builtin@ to the term @m q def@,
 -- where @def@ is the current 'Definition' of @q@.
@@ -389,7 +412,7 @@ getDef t = do
 bindBuiltinBool :: Term -> TCM ()
 bindBuiltinBool t = do
   bool <- getDef t
-  addHaskellType bool "Bool"
+  addFFITypeBind bool Way_MAZ_HS (TyBind_MAZ_HS "Bool")
   bindBuiltinName builtinBool t
 
 bindBuiltinNat :: Term -> TCM ()
@@ -405,7 +428,7 @@ bindBuiltinNat t = do
                       | otherwise = (c2, c1)
           tnat = el primNat
           rerange = setRange (getRange nat)
-      addHaskellType nat "Integer"
+      addFFITypeBind nat Way_MAZ_HS (TyBind_MAZ_HS "Integer")
       bindBuiltinInfo (BuiltinInfo builtinZero $ BuiltinDataCons tnat)
                       (A.Con $ AmbQ [rerange zero])
       bindBuiltinInfo (BuiltinInfo builtinSuc  $ BuiltinDataCons (tnat --> tnat))
@@ -440,9 +463,15 @@ bindBuiltinInfo (BuiltinInfo s d) e = do
 
         let v@(Con h []) = name e'
             c = conName h
-        when (s == builtinTrue)  $ addHaskellCode c "Bool" "True"
-        when (s == builtinFalse) $ addHaskellCode c "Bool" "False"
+        when (s == builtinTrue)  $ addFFIConBind c Way_MAZ_HS (ConBind_MAZ_HS "Bool" "True")
+        when (s == builtinFalse) $ addFFIConBind c Way_MAZ_HS (ConBind_MAZ_HS "Bool" "False")
         bindBuiltinName s v
+
+      BuiltinRecord t fs -> do
+        e' <- checkExpr e =<< t
+        recordCheck s e'
+        bindBuiltinName s e'
+
 
       BuiltinPrim pfname axioms -> do
         case e of

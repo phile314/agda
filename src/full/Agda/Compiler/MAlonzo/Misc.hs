@@ -129,9 +129,9 @@ conhqn :: QName -> TCM HS.QName
 conhqn q = do
     cq  <- canonicalName q
     def <- getConstInfo cq
-    case (compiledHaskell (defCompiledRep def), theDef def) of
-      (Just (HsDefn _ hs), Constructor{}) -> return $ hsName hs
-      _                                   -> xhqn "C" cq
+    case getFFIConBind Way_MAZ_HS (defCompiledRep def) of
+      Just (ConBind_MAZ_HS _ hs) -> return $ HS.UnQual $ HS.Ident hs
+      _                          -> xhqn "C" cq
 
 -- qualify name s by the module of builtin b
 bltQual :: String -> String -> TCM HS.QName

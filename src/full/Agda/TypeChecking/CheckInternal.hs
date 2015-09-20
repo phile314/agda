@@ -26,6 +26,7 @@ import Agda.TypeChecking.Level
 import Agda.TypeChecking.Monad
 import Agda.TypeChecking.Monad.Builtin
 import Agda.TypeChecking.Pretty
+import Agda.TypeChecking.Primitive
 import Agda.TypeChecking.ProjectionLike (elimView)
 import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Substitute
@@ -143,6 +144,7 @@ checkInternal v t = do
       levelType >>= (`subtype` t)
     DontCare v -> checkInternal v t
     Shared{}   -> __IMPOSSIBLE__
+
 
 {-  RETIRED, works also when elimView has not been called before.
 -- | Check function application.

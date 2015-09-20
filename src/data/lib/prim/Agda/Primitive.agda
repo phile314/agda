@@ -25,9 +25,12 @@ postulate
   lsuc  : (ℓ : Level) → Level
   _⊔_   : (ℓ₁ ℓ₂ : Level) → Level
 
+{-
+TODO
 {-# COMPILED lzero ()           #-}
 {-# COMPILED lsuc  (\_ -> ())   #-}
 {-# COMPILED _⊔_   (\_ _ -> ()) #-}
+-}
 
 {-# BUILTIN LEVELZERO lzero #-}
 {-# BUILTIN LEVELSUC  lsuc  #-}

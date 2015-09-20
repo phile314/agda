@@ -169,6 +169,7 @@ library
                     Agda.Compiler.Epic.Primitive
                     Agda.Compiler.Epic.Smashing
                     Agda.Compiler.Epic.Static
+                    Agda.Compiler.FFI
                     Agda.Compiler.HaskellTypes
                     Agda.Compiler.JS.Case
                     Agda.Compiler.JS.Compiler
@@ -353,6 +354,7 @@ library
                     Agda.TypeChecking.Rules.Decl
                     Agda.TypeChecking.Rules.Def
                     Agda.TypeChecking.Rules.Display
+                    Agda.TypeChecking.Rules.FFI
                     Agda.TypeChecking.Rules.LHS
                     Agda.TypeChecking.Rules.LHS.Implicit
                     Agda.TypeChecking.Rules.LHS.Instantiate

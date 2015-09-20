@@ -486,6 +486,8 @@ instance ToConcrete A.Expr C.Expr where
 
     toConcrete (A.ScopedExpr _ e) = toConcrete e
 
+    toConcrete (A.ForeignCall i) = return $ C.ForeignCall (getRange i)
+
     toConcrete (A.QuoteGoal i x e) =
       bracket lamBrackets $
         bindToConcrete x $ \ x' -> do

@@ -762,6 +762,9 @@ instance ToAbstract C.Expr A.Expr where
       C.ETel _  -> __IMPOSSIBLE__
       C.Equal{} -> genericError "Parse error: unexpected '='"
 
+  -- FFI
+      C.ForeignCall r -> return $ A.ForeignCall (ExprRange r)
+
   -- Quoting
       C.QuoteGoal _ x e -> do
         x' <- toAbstract (NewName x)

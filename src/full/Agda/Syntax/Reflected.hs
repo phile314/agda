@@ -31,6 +31,7 @@ data Term = Var Int Elims
           | QuoteGoal (Abs Term)
           | QuoteTerm Term
           | Unquote Term Elims
+          | ForeignCall Term Type Elims
           | Unknown
   deriving (Show)
 

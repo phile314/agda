@@ -39,7 +39,8 @@ fromAgda msharp defs = catMaybes <$> mapM (translateDefn msharp) defs
 translateDefn :: Maybe T.Term -> (QName, Definition) -> Compile TCM (Maybe Fun)
 translateDefn msharp (n, defini) =
   let n' = unqname n
-      epDef = compiledEpic $ defCompiledRep defini
+      -- epic backend is disabled...
+      epDef = __IMPOSSIBLE__ -- compiledEpic $ defCompiledRep defini
   in case theDef defini of
     d@(Datatype {}) -> do -- become functions returning unit
         vars <- replicateM (dataPars d + dataIxs d) newName

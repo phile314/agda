@@ -10,8 +10,10 @@ import Control.Monad.Writer (execWriterT, tell)
 import Control.Monad.Trans (lift)
 
 import Data.Char
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Traversable (traverse)
+import qualified Data.Map as Map
+import Data.Typeable
 
 import Agda.Syntax.Common
 import Agda.Syntax.Internal as I
@@ -25,7 +27,7 @@ import Agda.TypeChecking.Datatypes ( getConHead )
 import Agda.TypeChecking.DropArgs
 import Agda.TypeChecking.Free
 import Agda.TypeChecking.Level
-import Agda.TypeChecking.Monad
+import Agda.TypeChecking.Monad hiding (FFIFunImport, FFIFunImport' (..))
 import Agda.TypeChecking.Monad.Builtin
 import Agda.TypeChecking.Monad.Exception
 import Agda.TypeChecking.Pretty
@@ -309,7 +311,8 @@ instance Unquote R.Term where
           , (c `isCon` primAgdaTermUnquote, R.Unquote <$> unquoteN x <*> unquoteN y)
           , (c `isCon` primAgdaTermLam,     R.Lam     <$> unquoteN x <*> unquoteN y)
           , (c `isCon` primAgdaTermPi,      mkPi      <$> unquoteN x <*> unquoteN y)
-          , (c `isCon` primAgdaTermExtLam,  R.ExtLam  <$> unquoteN x <*> unquoteN y) ]
+          , (c `isCon` primAgdaTermExtLam,  R.ExtLam  <$> unquoteN x <*> unquoteN y)
+          , (c `isCon` primAgdaTermForeign, R.ForeignCall <$> unquoteN x <*> unquoteN y <*> pure []) ]
           __IMPOSSIBLE__
         where
           mkPi :: Dom R.Type -> R.Abs R.Type -> R.Term
@@ -371,3 +374,19 @@ instance Unquote R.Definition where
           __IMPOSSIBLE__
       Con c _ -> __IMPOSSIBLE__
       _ -> throwException $ NotAConstructor "Pattern" t
+
+
+
+
+
+isRecCon :: ConHead -> TCM Term -> UnquoteM Bool
+isRecCon con tm = do
+  t <- lift tm
+  case ignoreSharing t of
+    Def recNm _ -> do
+      recDef <- lift $ getConstInfo recNm
+      case theDef recDef of
+        r@(Record {}) -> return (recConHead r == con)
+        _ -> __IMPOSSIBLE__
+    _ -> __IMPOSSIBLE__
+

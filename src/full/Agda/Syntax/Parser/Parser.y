@@ -134,6 +134,7 @@ import Agda.Utils.Tuple
     'COMPILED_JS'   { TokKeyword KwCOMPILED_JS $$ }
     'COMPILED_UHC'  { TokKeyword KwCOMPILED_UHC $$ }
     'COMPILED_DATA_UHC'   { TokKeyword KwCOMPILED_DATA_UHC $$ }
+    'foreign'       { TokKeyword KwForeign $$ }
     'NO_SMASHING'   { TokKeyword KwNO_SMASHING $$ }
     'STATIC'        { TokKeyword KwSTATIC $$ }
     'quoteGoal'     { TokKeyword KwQuoteGoal $$ }
@@ -250,6 +251,7 @@ Token
     | 'COMPILED_JS'  { TokKeyword KwCOMPILED_JS $1 }
     | 'COMPILED_UHC' { TokKeyword KwCOMPILED_UHC $1 }
     | 'COMPILED_DATA_UHC' {TokKeyword KwCOMPILED_DATA_UHC $1 }
+    | 'foreign'      { TokKeyword KwForeign $1 }
     | 'NO_SMASHING'  { TokKeyword KwNO_SMASHING $1 }
     | 'STATIC'       { TokKeyword KwSTATIC $1 }
     | 'IMPOSSIBLE'    { TokKeyword KwIMPOSSIBLE $1 }
@@ -638,6 +640,7 @@ Expr3NoCurly
     | '_'                               { Underscore (getRange $1) Nothing }
     | 'Prop'                            { Prop (getRange $1) }
     | 'Set'                             { Set (getRange $1) }
+    | 'foreign'                         { ForeignCall (getRange $1) }
     | 'quote'                           { Quote (getRange $1) }
     | 'quoteTerm'                       { QuoteTerm (getRange $1) }
     | 'quoteContext'                    { QuoteContext (getRange $1) }

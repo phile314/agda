@@ -47,6 +47,7 @@ import qualified Agda.Syntax.Concrete.Name as C
 import Agda.Syntax.Internal as I
 import qualified Agda.Syntax.Treeless as T
 import Agda.Syntax.Literal
+import Agda.Compiler.HaskellTypes
 
 import Agda.TypeChecking.Monad
 import Agda.TypeChecking.Monad.Builtin
@@ -175,15 +176,18 @@ definition kit Defn{defArgInfo = info, defName = q} | isIrrelevant info = do
   reportSDoc "malonzo.definition" 10 $
     text "Not compiling" <+> prettyTCM q <> text "."
   return []
-definition kit Defn{defName = q, defType = ty, defCompiledRep = compiled, theDef = d} = do
+definition kit def@Defn{defName = q, defType = ty, defCompiledRep = compiled, theDef = d} = do
   reportSDoc "malonzo.definition" 10 $ vcat
     [ text "Compiling" <+> prettyTCM q <> text ":"
-    , nest 2 $ text (show d)
+    , nest 2 $ text (show def)
     ]
   checkTypeOfMain q ty $ do
     (infodecl q :) <$> case d of
 
-      _ | Just (HsDefn ty hs) <- compiledHaskell compiled ->
+      _ | Just (FunImp_MAZ_HS hs) <- getFFIFunImport Target_MAZ_Native compiled -> do
+        ty <- haskellType ty
+        return $ fbWithType ty (fakeExp hs)
+      _ | Just (ConBind_MAZ_HS ty hs) <- getFFIConBind Way_MAZ_HS compiled ->
         return $ fbWithType ty (fakeExp hs)
 
       -- Special treatment of coinductive builtins.
@@ -230,11 +234,11 @@ definition kit Defn{defName = q, defType = ty, defCompiledRep = compiled, theDef
       Primitive{ primName = s } -> fb <$> primBody s
 
       Function{ funCompiled = Just cc } ->
-        function (exportHaskell compiled) $ functionViaTreeless q cc
+        function (getFFIFunExport Way_MAZ_HS compiled) $ functionViaTreeless q cc
       Function { funCompiled = Nothing } -> __IMPOSSIBLE__
 
       Datatype{ dataPars = np, dataIxs = ni, dataClause = cl, dataCons = cs }
-        | Just (HsType ty) <- compiledHaskell compiled -> do
+        | Just (TyBind_MAZ_HS ty) <- getFFITypeBind Way_MAZ_HS compiled -> do
         ccscov <- ifM (isPrimNat q) (return []) $ do
             ccs <- List.concat <$> mapM checkConstructorType cs
             cov <- checkCover q ty np cs
@@ -254,12 +258,12 @@ definition kit Defn{defName = q, defType = ty, defCompiledRep = compiled, theDef
   --         Just c  -> snd <$> condecl c
         return $ tvaldecl q Inductive noFields ar [cd] cl
   where
-  function :: Maybe HaskellExport -> TCM [HS.Decl] -> TCM [HS.Decl]
+  function :: Maybe FFIFunExport' -> TCM [HS.Decl] -> TCM [HS.Decl]
   function mhe fun = do
     ccls <- mkwhere <$> fun
     case mhe of
       Nothing -> return ccls
-      Just (HsExport t name) -> do
+      Just (FunExp_MAZ_HS t name) -> do
         let tsig :: HS.Decl
             tsig = HS.TypeSig dummy [HS.Ident name] (fakeType t)
 
@@ -342,7 +346,7 @@ intros n cont = freshNames n $ \xs ->
 
 checkConstructorType :: QName -> TCM [HS.Decl]
 checkConstructorType q = do
-  Just (HsDefn ty hs) <- compiledHaskell . defCompiledRep <$> getConstInfo q
+  Just (ConBind_MAZ_HS ty hs) <- getFFIConBind Way_MAZ_HS . defCompiledRep <$> getConstInfo q
   return [ HS.TypeSig dummy [unqhname "check" q] $ fakeType ty
          , HS.FunBind [HS.Match dummy (unqhname "check" q) [] Nothing
                                 (HS.UnGuardedRhs $ fakeExp hs) (HS.BDecls [])]
@@ -353,7 +357,7 @@ checkCover q ty n cs = do
   let tvs = [ "a" ++ show i | i <- [1..n] ]
       makeClause c = do
         (a, _) <- conArityAndPars c
-        Just (HsDefn _ hsc) <- compiledHaskell . defCompiledRep <$> getConstInfo c
+        Just (ConBind_MAZ_HS _ hsc) <- getFFIConBind Way_MAZ_HS . defCompiledRep <$> getConstInfo c
         let pat = HS.PApp (HS.UnQual $ HS.Ident hsc) $ replicate a HS.PWildCard
         return $ HS.Alt dummy pat (HS.UnGuardedRhs $ HS.unit_con) (HS.BDecls [])
 

@@ -293,6 +293,7 @@ instance Rename Expr where
       Rec i fes             -> Rec i $ rename rho fes
       RecUpdate i e fes     -> RecUpdate i (rename rho e) (rename rho fes)
       ScopedExpr i e        -> ScopedExpr i (rename rho e)
+      ForeignCall i         -> e
       QuoteGoal i n e       -> QuoteGoal i n (rename rho e)
       QuoteContext i        -> e
       Quote i               -> e

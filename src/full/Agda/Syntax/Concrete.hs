@@ -151,6 +151,7 @@ data Expr
   | As Range Name Expr                         -- ^ ex: @x\@p@, only in patterns
   | Dot Range Expr                             -- ^ ex: @.p@, only in patterns
   | ETel Telescope                             -- ^ only used for printing telescopes
+  | ForeignCall !Range
   | QuoteGoal Range Name Expr                  -- ^ ex: @quoteGoal x in e@
   | QuoteContext Range                         -- ^ ex: @quoteContext@
   | Quote Range                                -- ^ ex: @quote@, should be applied to a name
@@ -550,6 +551,7 @@ instance HasRange Expr where
       Rec r _            -> r
       RecUpdate r _ _    -> r
       ETel tel           -> getRange tel
+      ForeignCall r      -> r
       QuoteGoal r _ _    -> r
       QuoteContext r     -> r
       Quote r            -> r
@@ -771,6 +773,7 @@ instance KillRange Expr where
   killRange (As _ n e)           = killRange2 (As noRange) n e
   killRange (Dot _ e)            = killRange1 (Dot noRange) e
   killRange (ETel t)             = killRange1 ETel t
+  killRange (ForeignCall _)      = ForeignCall noRange
   killRange (QuoteGoal _ n e)    = killRange2 (QuoteGoal noRange) n e
   killRange (QuoteContext _)     = QuoteContext noRange
   killRange (Quote _)            = Quote noRange
@@ -905,6 +908,7 @@ instance NFData Expr where
   rnf (Unquote _)        = ()
   rnf (DontCare a)       = rnf a
   rnf (Equal _ a b)      = rnf a `seq` rnf b
+  rnf (ForeignCall _)    = ()
 
 -- | Ranges are not forced.
 

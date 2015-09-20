@@ -105,6 +105,7 @@ instance ExprLike Expr where
       Rec ei bs               -> Rec ei <$> recurse bs
       RecUpdate ei e bs       -> RecUpdate ei <$> recurse e <*> recurse bs
       ScopedExpr sc e         -> ScopedExpr sc <$> recurse e
+      ForeignCall{}           -> pure e0
       QuoteGoal ei n e        -> QuoteGoal ei n <$> recurse e
       QuoteContext ei         -> pure e0
       Quote{}                 -> pure e0
@@ -140,6 +141,7 @@ instance ExprLike Expr where
       Rec _ as             -> m `mappend` fold as
       RecUpdate _ e as     -> m `mappend` fold e `mappend` fold as
       ScopedExpr _ e       -> m `mappend` fold e
+      ForeignCall{}        -> m
       QuoteGoal _ _ e      -> m `mappend` fold e
       QuoteContext _       -> m
       Quote{}              -> m
@@ -175,6 +177,7 @@ instance ExprLike Expr where
       Rec ei bs               -> f =<< Rec ei <$> trav bs
       RecUpdate ei e bs       -> f =<< RecUpdate ei <$> trav e <*> trav bs
       ScopedExpr sc e         -> f =<< ScopedExpr sc <$> trav e
+      ForeignCall{}           -> f e
       QuoteGoal ei n e        -> f =<< QuoteGoal ei n <$> trav e
       QuoteContext{}          -> f e
       Quote{}                 -> f e

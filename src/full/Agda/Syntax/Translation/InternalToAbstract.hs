@@ -813,6 +813,7 @@ instance DotVars A.Expr where
     A.Rec _ es             -> dotVars es
     A.RecUpdate _ e es     -> dotVars (e, es)
     A.ETel _               -> __IMPOSSIBLE__
+    A.ForeignCall {}       -> __IMPOSSIBLE__
     A.QuoteGoal {}         -> __IMPOSSIBLE__
     A.QuoteContext {}      -> __IMPOSSIBLE__
     A.Quote {}             -> __IMPOSSIBLE__

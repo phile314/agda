@@ -55,7 +55,7 @@ import Agda.TypeChecking.Constraints
 import Agda.TypeChecking.Conversion
 import Agda.TypeChecking.Datatypes
 import Agda.TypeChecking.EtaContract
-import Agda.TypeChecking.Free (isBinderUsed)
+import Agda.TypeChecking.Free (isBinderUsed, closed)
 import Agda.TypeChecking.Implicit
 import Agda.TypeChecking.InstanceArguments
 import Agda.TypeChecking.Irrelevance
@@ -823,6 +823,7 @@ checkExpr e t0 =
                     ty <- el primAgdaTerm
                     coerce q ty t
 
+        A.ForeignCall _ -> typeError $ GenericError "foreign must be applied to a term"
         A.Quote _ -> typeError $ GenericError "quote must be applied to a defined name"
         A.QuoteTerm _ -> typeError $ GenericError "quoteTerm must be applied to a term"
         A.Unquote _ -> typeError $ GenericError "unquote must be applied to a term"
@@ -1058,8 +1059,59 @@ checkApplication hd args e t = do
                      , nest 2 $ text "-->" <+> prettyA e ]
               cont e
 
+    A.ForeignCall _
+      | [a1, a2] <- args -> do
+          foreignCall (namedArg a1) (namedArg a2) $ \e -> do
+            reportSDoc "tc.ffi" 20 $ text "C1:" <+> (text $ show e) <+> text "with type" <+> (text $ show t)
+            checkExpr e t
+      | a1 : a2 : args <- args -> do
+          foreignCall (namedArg a1) (namedArg a2) $ \e -> do
+            reportSDoc "tc.ffi" 20 $ text "C2:" <+> (text $ show e) <+> text "with type" <+> (text $ show t) <+> text "; args"
+            checkHeadApplication e t e args
+      where
+        foreignCall :: A.Expr -> A.Expr -> (A.Expr -> TCM Term) -> TCM Term
+        foreignCall qv fty cont = error "TODO" {-do
+          qv' <- checkExpr qv =<< el primFFIFunImportSpec
+          mv <- runUnquoteM $ unquote qv'
+          case mv of
+            Left (BlockedOnMeta m) -> do
+              reportSDoc "tc.ffi" 20 $ text "Blocked on meta"
+              r <- getRange <$> lookupMeta m
+              setCurrentRange r $
+                postponeTypeCheckingProblem (CheckExpr e t) (isInstantiatedMeta m)
+            Left err -> typeError $ UnquoteFailed err
+            Right (v :: FFI.FFIFunImportSpec) -> do
+              reportSDoc "tc.ffi" 10 $
+                vcat [text "foreign" <+> prettyTCM qv
+                     , nest 2 $ text "-->" <+> (text $ show mv)]
+              fty <- inTopContext $ workOnTypes $ isType_ fty
+              unless (closed fty) (do
+                typeError $ GenericError $ "The type of a foreign call must be a closed term."
+                )
+
+              -- add an axiom with the ffi call
+              reportSDoc "tc.ffi" 10 $
+                text "FFI type:" <+> prettyTCM fty <+> text " ====" <+> (text $ show fty)
+              top <- currentModule
+              aux <- qualify top <$> freshNoName (getRange qv)
+              -- the type of our definition is a closed term, hence
+              -- we can just lift it to the top-level without
+              -- actually doing any lambda-lifting
+              inTopContext $ addConstant aux
+                $ (defaultDefn defaultArgInfo aux fty Axiom)
+                { defCompiledRep = FFIFunImport v
+                }
+--              solveSizeConstraints
+--              wakeupConstraints_
+
+
+              reportSDoc "tc.ffi" 10 $ text "continuing"
+              t <- cont (A.Def aux)
+              return t-}
+
     -- Subcase: defined symbol or variable.
     _ -> checkHeadApplication e t hd args
+
 
 -- | Turn a domain-free binding (e.g. lambda) into a domain-full one,
 --   by inserting an underscore for the missing type.

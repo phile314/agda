@@ -24,6 +24,7 @@ module Agda.Compiler.UHC.CompileState
   , moduleNameToCoreName
   , moduleNameToCoreNameParts
   , freshLocalName
+  , withNames
 
   , getCurrentModule
 
@@ -73,6 +74,7 @@ data CompileState = CompileState
     , coreMetaCon :: Map.Map QName [CDataCon] -- map data name to constructors
     , coreExports :: [CExport] -- ^ UHC core exports
     , nameSupply :: Integer
+    , additionalNames :: Map.Map QName HsName -- ^ overrides name lookup
     }
 
 -- | Compiler monad
@@ -107,6 +109,7 @@ runCompileT amod curImpMods comp = do
             , coreMetaCon = Map.empty
             , coreExports = []
             , nameSupply = 0
+            , additionalNames = Map.empty
             }
 
 addExports :: Monad m => [HsName] -> CompileT m ()
@@ -165,13 +168,13 @@ getConstrCTag :: QName -> Compile CTag
 getConstrCTag q = do
   def <- lift $ getConstInfo q
   (arity, _) <- lift $ conArityAndPars q
-  case compiledCore $ defCompiledRep def of
+  case getFFIConBind Way_UHC_Core $ defCompiledRep def of
     Nothing -> do
       let dtQ = conData $ theDef def
       -- get tag, which is the index of current con in datatype con list
       tag <- fromJust . elemIndex q . dataRecCons . theDef <$> lift (getConstInfo dtQ)
-      mkCTag <$> getCoreName dtQ <*> (getCoreName q) <*> pure tag <*> pure arity
-    Just (CrConstr crCon) -> do
+      mkCTag <$> getCoreName dtQ <*> getCoreName q <*> pure tag <*> pure arity
+    Just (ConBind_UHC_Core crCon) -> do
       return $ coreConstrToCTag crCon arity
     _ -> __IMPOSSIBLE__
 
@@ -180,9 +183,9 @@ getConstrCTag q = do
 getConstrFun :: QName -> Compile HsName
 getConstrFun q = do
   def <- lift $ getConstInfo q
-  case compiledCore $ defCompiledRep def of
+  case getFFIConBind Way_UHC_Core $ defCompiledRep def of
     Nothing -> getCoreName q
-    Just (CrConstr crCon) ->
+    Just (ConBind_UHC_Core crCon) ->
       return $
         destructCTag builtinUnitCtor (\_ con _ _ -> con)
           (coreConstrToCTag crCon 0) -- Arity doesn't matter here, as we immediately destruct the ctag again!
@@ -212,7 +215,11 @@ moduleNameToCoreName modNm = mkHsName (init nmParts) (last nmParts)
 
 getCoreName :: QName -> Compile HsName
 getCoreName qnm = CompileT $ do
-  lift $ getCoreName1 qnm
+  aNms <- gets additionalNames
+
+  case qnm `Map.lookup` aNms of
+    Nothing -> lift $ getCoreName1 qnm
+    Just x -> return x
 
 getCoreName1 :: QName -> TCM HsName
 getCoreName1 qnm = do
@@ -259,8 +266,19 @@ unqualifyQ modNm qnm =
     modNs = mnameToList modNm
     qnms = qnameToList qnm
 
+withNames :: Monad m => [(QName, HsName)] -> CompileT m a -> CompileT m a
+withNames nms = withNames' (Map.fromList nms)
 
-
+withNames' :: Monad m => Map.Map QName HsName -> CompileT m a -> CompileT m a
+withNames' nms c = do
+  nms' <- CompileT $ do
+    nms' <- gets additionalNames
+    modify (\s -> s { additionalNames = nms `Map.union` nms' })
+    return nms'
+  c' <- c
+  CompileT $ do
+    modify (\s -> s { additionalNames = nms' })
+    return c'
 
 instance MonadReader r m => MonadReader r (CompileT m) where
   ask = lift ask

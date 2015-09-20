@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternGuards #-}
 
 module Agda.Compiler.JS.Compiler where
 
@@ -48,7 +49,9 @@ import Agda.TypeChecking.Monad
     recConHead, recFields, recNamedCon,
     localTCState,
     typeError, TypeError(NotImplemented),
-    defJSDef )
+    defCompiledRep, CompiledRepresentation,
+    FFIFunImport' (..), FFITypeBind' (..), FFIConBind' (..), CompileTarget (..), FFIWay (..),
+    getFFIFunImport, getFFITypeBind, getFFIConBind)
 import Agda.TypeChecking.Monad.Options ( setCommandLineOptions, commandLineOptions, reportSLn )
 import Agda.TypeChecking.Reduce ( instantiateFull, normalise )
 import Agda.Utils.FileName ( filePath )
@@ -219,13 +222,13 @@ definition :: (QName,Definition) -> TCM Export
 definition (q,d) = do
   (_,ls) <- global q
   d <- instantiateFull d
-  e <- defn q ls (defType d) (defJSDef d) (theDef d)
+  e <- defn (defCompiledRep d) q ls (defType d) (theDef d)
   return (Export ls e)
 
-defn :: QName -> [MemberId] -> Type -> Maybe JSCode -> Defn -> TCM Exp
-defn q ls t (Just e) Axiom =
+defn :: CompiledRepresentation -> QName -> [MemberId] -> Type -> Defn -> TCM Exp
+defn d q ls t Axiom | Just (FunImp_JS_JS e) <- getFFIFunImport Target_JS_JS d =
   return e
-defn q ls t Nothing Axiom = do
+defn _ q ls t Axiom | otherwise = do
   t <- normalise t
   s <- isSingleton t
   case s of
@@ -235,9 +238,7 @@ defn q ls t Nothing Axiom = do
     -- Everything else we leave undefined
     Nothing ->
       return Undefined
-defn q ls t (Just e) (Function {}) =
-  return e
-defn q ls t Nothing (Function { funProjection = proj, funClauses = cls }) = do
+defn _ q ls t (Function { funProjection = proj, funClauses = cls }) = do
   t <- normalise t
   s <- isSingleton t
   cs <- mapM clause cls
@@ -268,15 +269,13 @@ defn q ls t Nothing (Function { funProjection = proj, funClauses = cls }) = do
 -}
       Nothing ->
         return (lambda cs)
-defn q ls t (Just e) (Primitive {}) =
-  return e
-defn q ls t _ (Primitive {}) =
+defn _ q ls t (Primitive {}) =
   return Undefined
-defn q ls t _ (Datatype {}) =
+defn _ q ls t (Datatype {}) =
   return emp
-defn q ls t (Just e) (Constructor {}) =
+defn d q ls t (Constructor {}) | Just (ConBind_JS_JS e) <- getFFIConBind Way_JS_JS d =
   return e
-defn q ls t _ (Constructor { conData = p, conPars = nc }) = do
+defn _ q ls t (Constructor { conData = p, conPars = nc }) = do
   np <- return (arity t - nc)
   d <- getConstInfo p
   case theDef d of
@@ -291,7 +290,7 @@ defn q ls t _ (Constructor { conData = p, conPars = nc }) = do
       return (curriedLambda (np + 1)
         (Apply (Lookup (Local (LocalId 0)) (last ls))
           [ Local (LocalId (np - i)) | i <- [0 .. np-1] ]))
-defn q ls t _ (Record {}) =
+defn _ q ls t (Record {}) =
   return emp
 
 -- Number of params in a function declaration
@@ -344,16 +343,16 @@ tag q = do
   case theDef c of
     (Constructor { conData = p }) -> do
       d <- getConstInfo p
-      case (defJSDef d, theDef d) of
-        (Just e, Datatype { dataCons = qs }) -> do
+      case theDef d of
+        Datatype { dataCons = qs } | Just (TyBind_JS_JS e) <- getFFITypeBind Way_JS_JS (defCompiledRep d) -> do
           ls <- mapM visitorName qs
           return (Tag l ls (\ x xs -> apply e (x:xs)))
-        (Nothing, Datatype { dataCons = qs }) -> do
+        Datatype { dataCons = qs } | otherwise -> do
           ls <- mapM visitorName qs
           return (Tag l ls Apply)
-        (Just e, Record {}) -> do
+        Record {} | Just (TyBind_JS_JS e) <- getFFITypeBind Way_JS_JS (defCompiledRep d) -> do
           return (Tag l [l] (\ x xs -> apply e (x:xs)))
-        (Nothing, Record {}) -> do
+        Record {} | otherwise -> do
           return (Tag l [l] Apply)
         _ -> __IMPOSSIBLE__
     _ -> __IMPOSSIBLE__
@@ -385,33 +384,32 @@ term v = do
         -- Datatypes and records are erased
         Datatype {} -> return (String "*")
         Record {} -> return (String "*")
-        _ -> case defJSDef d of
+        _ | Just (FunImp_JS_JS e) <- getFFIFunImport Target_JS_JS (defCompiledRep d) -> do
           -- Inline functions with an FFI definition
-          Just e -> do
-            es <- args (projectionArgs $ theDef d) as
-            return (curriedApply e es)
-          Nothing -> do
-            t <- normalise (defType d)
-            s <- isSingleton t
-            case s of
-              -- Inline and eta-expand singleton types
-              Just e ->
-                return (curriedLambda (arity t) e)
-              -- Everything else we leave non-inline
-              Nothing -> do
-                e <- qname q
-                es <- args (projectionArgs $ theDef d) as
-                return (curriedApply e es)
+          es <- args (projectionArgs $ theDef d) as
+          return (curriedApply e es)
+        _ | otherwise -> do
+          t <- normalise (defType d)
+          s <- isSingleton t
+          case s of
+            -- Inline and eta-expand singleton types
+            Just e ->
+              return (curriedLambda (arity t) e)
+            -- Everything else we leave non-inline
+            Nothing -> do
+              e <- qname q
+              es <- args (projectionArgs $ theDef d) as
+              return (curriedApply e es)
     (Con con as)         -> do
       let q = conName con
       d <- getConstInfo q
-      case defJSDef d of
-        -- Inline functions with an FFI definition
-        Just e -> do
+      case () of
+        _ | Just (ConBind_JS_JS e) <- getFFIConBind Way_JS_JS (defCompiledRep d) -> do
+          -- Inline functions with an FFI definition
           es <- args 0 as
           return (curriedApply e es)
-        -- Everything else we leave non-inline
-        Nothing -> do
+        _ | otherwise -> do
+          -- Everything else we leave non-inline
           e <- qname q
           es <- args 0 as
           return (curriedApply e es)

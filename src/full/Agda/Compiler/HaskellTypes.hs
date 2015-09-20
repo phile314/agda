@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE PatternGuards #-}
 
 -- | Translating Agda types to Haskell types. Used to ensure that imported
 --   Haskell functions have the right type.
@@ -61,11 +62,10 @@ notAHaskellType a = do
 
 getHsType :: QName -> TCM HaskellType
 getHsType x = do
-  d <- compiledHaskell . defCompiledRep <$> getConstInfo x
-  case d of
-    Just (HsType t)   -> return t
-    Just (HsDefn t c) -> return hsUnit
-    _                 -> notAHaskellType (El Prop $ Def x [])
+  d <- defCompiledRep <$> getConstInfo x
+  case () of
+    _ | Just (TyBind_MAZ_HS t) <- getFFITypeBind Way_MAZ_HS d -> return t
+    _ | otherwise -> notAHaskellType (El Prop $ Def x [])
 
 getHsVar :: Nat -> TCM HaskellCode
 getHsVar i = hsVar <$> nameOfBV i

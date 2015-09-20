@@ -14,25 +14,84 @@ import Agda.TypeChecking.Serialise.Instances.Common ()
 
 import Agda.TypeChecking.Monad
 
-instance EmbPrj HaskellExport where
-  icod_ (HsExport a b) = icode2' a b
+instance EmbPrj CompileTarget where
+  icod_ Target_MAZ_Native = icode0 0
+  icod_ Target_JS_JS      = icode0 1
+  icod_ Target_UHC_Native = icode0 2
   value = vcase valu where
-    valu [a,b] = valu2 HsExport a b
-    valu _ = malformed
+    valu [0] = valu0 Target_MAZ_Native
+    valu [1] = valu0 Target_JS_JS
+    valu [2] = valu0 Target_UHC_Native
+    valu _   = malformed
 
-instance EmbPrj HaskellRepresentation where
-  icod_ (HsType a)   = icode1' a
-  icod_ (HsDefn a b) = icode2' a b
-
+instance EmbPrj FFIWay where
+  icod_ Way_MAZ_HS = icode0 0
+  icod_ Way_JS_JS  = icode0 1
+  icod_ Way_UHC_Core = icode0 2
+  icod_ Way_UHC_HS = icode0 3
   value = vcase valu where
-    valu [a]    = valu1 HsType a
-    valu [a, b] = valu2 HsDefn a b
+    valu [0] = valu0 Way_MAZ_HS
+    valu [1] = valu0 Way_JS_JS
+    valu [2] = valu0 Way_UHC_Core
+    valu [3] = valu0 Way_UHC_HS
+    valu _   = malformed
+
+
+instance EmbPrj FFIFunImport' where
+  icod_ (FunImp_MAZ_HS a)   = icode1 0 a
+  icod_ (FunImp_JS_JS a)    = icode1 1 a
+  icod_ (FunImp_UHC_HS a)   = icode1 2 a
+  icod_ (FunImp_UHC_Core a) = icode1 3 a
+  value = vcase valu where
+    valu [0, a]    = valu1 FunImp_MAZ_HS a
+    valu [1, a]    = valu1 FunImp_JS_JS a
+    valu [2, a]    = valu1 FunImp_UHC_HS a
+    valu [3, a]    = valu1 FunImp_UHC_Core a
+    valu _         = malformed
+
+instance EmbPrj FFITypeBind' where
+  icod_ (TyBind_MAZ_HS a) = icode1 0 a
+  icod_ (TyBind_JS_JS a)  = icode1 1 a
+  icod_ (TyBind_UHC_Core a) = icode1 2 a
+  value = vcase valu where
+    valu [0, a] = valu1 TyBind_MAZ_HS a
+    valu [1, a] = valu1 TyBind_JS_JS a
+    valu [2, a] = valu1 TyBind_UHC_Core a
     valu _      = malformed
 
+instance EmbPrj FFIFunExport' where
+  icod_ (FunExp_MAZ_HS a b) = icode2 0 a b
+  value = vcase valu where
+    valu [0, a, b] = valu2 FunExp_MAZ_HS a b
+    valu _         = malformed
+
+instance EmbPrj FFIConBind' where
+  icod_ (ConBind_MAZ_HS a b) = icode2 0 a b
+  icod_ (ConBind_JS_JS a)    = icode1 1 a
+  icod_ (ConBind_UHC_Core a) = icode1 2 a
+  value = vcase valu where
+    valu [0, a, b] = valu2 ConBind_MAZ_HS a b
+    valu [1, a]    = valu1 ConBind_JS_JS a
+    valu [2, a]    = valu1 ConBind_UHC_Core a
+    valu _         = malformed
+
+
 instance EmbPrj CompiledRepresentation where
-  icod_ (CompiledRep a b c d e) = icode5' a b c d e
-  value = vcase valu where valu [a, b, c, d, e] = valu5 CompiledRep a b c d e
-                           valu _         = malformed
+  icod_ (FFIFunImport a) = icode1 0 a
+  icod_ (FFIFunExport a) = icode1 1 a
+  icod_ (FFITypeBind a)  = icode1 2 a
+  icod_ (FFIConBind a)   = icode1 3 a
+  icod_ (FFINoBind)      = icode0 4
+  value = vcase valu where
+    valu [0, a] = valu1 FFIFunImport a
+    valu [1, a] = valu1 FFIFunExport a
+    valu [2, a] = valu1 FFITypeBind a
+    valu [3, a] = valu1 FFIConBind a
+    valu [4]    = valu0 FFINoBind
+    valu _      = malformed
+
+
+
 
 instance EmbPrj JS.Exp where
   icod_ (JS.Self)         = icode0 0
@@ -81,6 +140,7 @@ instance EmbPrj JS.MemberId where
   icod_ (JS.MemberId l) = icode l
   value n = JS.MemberId `fmap` value n
 
+{-
 instance EmbPrj CoreRepresentation where
   icod_ (CrDefn a)   = icode1 1 a
   icod_ (CrType a)   = icode1 2 a
@@ -91,6 +151,7 @@ instance EmbPrj CoreRepresentation where
     valu [2, a] = valu1 CrType a
     valu [3, a] = valu1 CrConstr a
     valu _      = malformed
+-}
 
 instance EmbPrj CR.CoreType where
   icod_ (CR.CTMagic a) = icode1 1 a

@@ -181,6 +181,7 @@ tokens :-
 <0,code> Prop           { keyword KwProp }
 <0,code> forall         { keyword KwForall }
 <0,code> Set @number    { withInterval' (read . drop 3) TokSetN }
+<0,code> foreign        { keyword KwForeign }
 <0,code> quoteGoal      { keyword KwQuoteGoal }
 <0,code> quoteContext   { keyword KwQuoteContext }
 <0,code> quote          { keyword KwQuote }

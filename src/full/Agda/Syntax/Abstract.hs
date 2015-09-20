@@ -80,6 +80,7 @@ data Expr
   | Rec  ExprInfo RecordAssigns        -- ^ Record construction.
   | RecUpdate ExprInfo Expr Assigns    -- ^ Record update.
   | ScopedExpr ScopeInfo Expr          -- ^ Scope annotation.
+  | ForeignCall ExprInfo
   | QuoteGoal ExprInfo Name Expr       -- ^ Binds @Name@ to current type in @Expr@.
   | QuoteContext ExprInfo              -- ^ Returns the current context.
   | Quote ExprInfo                     -- ^ Quote an identifier 'QName'.
@@ -454,6 +455,7 @@ instance HasRange Expr where
     getRange (RecUpdate i _ _)     = getRange i
     getRange (ETel tel)            = getRange tel
     getRange (ScopedExpr _ e)      = getRange e
+    getRange (ForeignCall i)       = getRange i
     getRange (QuoteGoal _ _ e)     = getRange e
     getRange (QuoteContext i)      = getRange i
     getRange (Quote i)             = getRange i
@@ -568,6 +570,7 @@ instance KillRange Expr where
   killRange (RecUpdate i e fs)     = killRange3 RecUpdate i e fs
   killRange (ETel tel)             = killRange1 ETel tel
   killRange (ScopedExpr s e)       = killRange1 (ScopedExpr s) e
+  killRange (ForeignCall i)        = killRange1 ForeignCall i
   killRange (QuoteGoal i x e)      = killRange3 QuoteGoal i x e
   killRange (QuoteContext i)       = killRange1 QuoteContext i
   killRange (Quote i)              = killRange1 Quote i
@@ -736,6 +739,7 @@ instance AllNames Expr where
   allNames (Rec _ fields)          = allNames [ a ^. exprFieldA | Left a <- fields ]
   allNames (RecUpdate _ e fs)      = allNames e >< allNames (map (view exprFieldA) fs)
   allNames (ScopedExpr _ e)        = allNames e
+  allNames ForeignCall{}           = Seq.empty
   allNames (QuoteGoal _ _ e)       = allNames e
   allNames (QuoteContext _)        = Seq.empty
   allNames Quote{}                 = Seq.empty
@@ -903,6 +907,7 @@ instance SubstExpr Expr where
     RecUpdate i e nes     -> RecUpdate i (substExpr s e) (substExpr s nes)
     -- XXX: Do we need to do more with ScopedExprs?
     ScopedExpr si e       -> ScopedExpr si (substExpr s e)
+    ForeignCall i         -> e
     QuoteGoal i n e       -> QuoteGoal i n (substExpr s e)
     QuoteContext i        -> e
     Quote i               -> e

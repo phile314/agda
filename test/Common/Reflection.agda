@@ -78,6 +78,7 @@ data Term : Set where
   quote-goal    : Abs Term → Term
   quote-context : Term
   unquote-term  : Term → Args → Term
+  tforeign       : Term -> Type -> Term
   unknown       : Term
 
 Args = List (Arg Term)
@@ -120,6 +121,7 @@ data Clause where
 {-# BUILTIN AGDATERMQUOTEGOAL    quote-goal    #-}
 {-# BUILTIN AGDATERMQUOTECONTEXT quote-context #-}
 {-# BUILTIN AGDATERMUNQUOTE      unquote-term  #-}
+{-# BUILTIN AGDATERMFOREIGN     tforeign #-}
 {-# BUILTIN AGDATERMUNSUPPORTED unknown #-}
 {-# BUILTIN AGDATYPEEL          el      #-}
 {-# BUILTIN AGDASORTSET         set     #-}

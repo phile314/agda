@@ -178,7 +178,7 @@ initialAnalysis inter = do
           Delayed -> True
           NotDelayed -> False
       a@(Axiom {}) -> do
-        case defEpicDef def of
+        case __IMPOSSIBLE__ {- Epic backend is disabled ... defEpicDef def-} of
           Nothing -> putDelayed q True
           _       -> return ()
       _ -> return ()

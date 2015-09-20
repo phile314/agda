@@ -168,6 +168,7 @@ instance Pretty Expr where
               sep [text "record" <+> pretty e, bracesAndSemicolons (map pretty xs)]
             ETel []  -> text "()"
             ETel tel -> fsep $ map pretty tel
+            ForeignCall _ -> text "foreign"
             QuoteGoal _ x e -> sep [text "quoteGoal" <+> pretty x <+> text "in",
                                     nest 2 $ pretty e]
             QuoteContext _ -> text "quoteContext"

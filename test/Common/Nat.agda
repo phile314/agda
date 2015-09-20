@@ -18,14 +18,12 @@ zero  + n = n
 suc m + n = suc (m + n)
 
 {-# BUILTIN NATPLUS _+_ #-}
-{-# COMPILED_JS _+_ function (x) { return function (y) { return x+y; }; } #-}
 
 _*_ : Nat → Nat → Nat
 zero  * n = zero
 suc m * n = n + m * n
 
 {-# BUILTIN NATTIMES _*_ #-}
-{-# COMPILED_JS _*_ function (x) { return function (y) { return x*y; }; } #-}
 
 _∸_ : Nat → Nat → Nat
 m     ∸ zero  = m
@@ -33,7 +31,6 @@ zero  ∸ _     = zero
 suc m ∸ suc n = m ∸ n
 
 {-# BUILTIN NATMINUS _∸_ #-}
-{-# COMPILED_JS _∸_ function (x) { return function (y) { return Math.max(0,x-y); }; } #-}
 
 pred : Nat → Nat
 pred zero    = zero

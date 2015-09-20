@@ -55,6 +55,7 @@ import Agda.Syntax.Internal.Pattern ()
 import Agda.Syntax.Fixity
 import Agda.Syntax.Position
 import Agda.Syntax.Scope.Base
+import qualified Agda.Syntax.Treeless as T
 import qualified Agda.Syntax.Info as Info
 
 import Agda.TypeChecking.CompiledClause
@@ -1110,23 +1111,78 @@ defaultDefn info x t def = Defn
   , theDef            = def
   }
 
-type HaskellCode = String
-type HaskellType = String
 type EpicCode    = String
 type JSCode      = JS.Exp
+type HaskellName = String
+type HaskellCode = String
+type HaskellType = String
+type CoreExpr = String
 
-data HaskellRepresentation
-      = HsDefn HaskellType HaskellCode
-      | HsType HaskellType
+data CompileTarget
+  = Target_MAZ_Native
+  | Target_JS_JS
+  | Target_UHC_Native
+  deriving (Typeable, Show, Eq, Ord)
+
+data FFIWay
+  = Way_MAZ_HS
+  | Way_JS_JS
+  | Way_UHC_Core
+  | Way_UHC_HS
+  deriving (Typeable, Show, Eq, Ord)
+
+
+type FFIFunImportSpec = Map CompileTarget FFIFunImport'
+type FFIFunExportSpec = Map FFIWay FFIFunExport'
+type FFITypeBindSpec  = Map FFIWay FFITypeBind'
+type FFIConBindSpec   = Map FFIWay FFIConBind'
+
+data FFIFunImport'
+  = FunImp_MAZ_HS   HaskellCode
+  | FunImp_JS_JS    JSCode
+  | FunImp_UHC_Core CR.CoreExpr
+  | FunImp_UHC_HS   CR.CoreExpr
   deriving (Typeable, Show)
 
-data HaskellExport = HsExport HaskellType String deriving (Show, Typeable)
+data FFITypeBind'
+  = TyBind_MAZ_HS HaskellType
+  | TyBind_JS_JS JSCode
+  | TyBind_UHC_Core CR.CoreType
+  deriving (Typeable, Show)
 
-data CoreRepresentation
-      = CrDefn CR.CoreExpr -- ^ Core code for functions.
-      | CrType CR.CoreType -- ^ Core type for agda type.
-      | CrConstr CR.CoreConstr  -- ^ Core constructor for agda constructor.
-    deriving (Typeable, Show)
+data FFIFunExport'
+  = FunExp_MAZ_HS HaskellType String
+  deriving (Typeable, Show)
+
+data FFIConBind'
+  = ConBind_MAZ_HS  HaskellType HaskellCode
+  | ConBind_JS_JS   JSCode
+  | ConBind_UHC_Core  CR.CoreConstr
+  deriving (Typeable, Show)
+
+data CompiledRepresentation
+  = FFIFunImport FFIFunImportSpec
+  | FFIFunExport FFIFunExportSpec
+  | FFITypeBind  FFITypeBindSpec
+  | FFIConBind   FFIConBindSpec
+  | FFINoBind
+  deriving (Typeable, Show)
+
+getFFITypeBind :: FFIWay -> CompiledRepresentation -> Maybe FFITypeBind'
+getFFITypeBind w (FFITypeBind m) = Map.lookup w m
+getFFITypeBind _ _ = Nothing
+
+getFFIFunImport :: CompileTarget -> CompiledRepresentation -> Maybe FFIFunImport'
+getFFIFunImport w (FFIFunImport m) = Map.lookup w m
+getFFIFunImport _ _ = Nothing
+
+getFFIFunExport :: FFIWay -> CompiledRepresentation -> Maybe FFIFunExport'
+getFFIFunExport w (FFIFunExport m) = Map.lookup w m
+getFFIFunExport _ _ = Nothing
+
+getFFIConBind :: FFIWay -> CompiledRepresentation -> Maybe FFIConBind'
+getFFIConBind w (FFIConBind m) = Map.lookup w m
+getFFIConBind _ _ = Nothing
 
 -- | Polarity for equality and subtype checking.
 data Polarity
@@ -1136,17 +1192,8 @@ data Polarity
   | Nonvariant     -- ^ constant
   deriving (Typeable, Show, Eq)
 
-data CompiledRepresentation = CompiledRep
-  { compiledHaskell :: Maybe HaskellRepresentation
-  , exportHaskell   :: Maybe HaskellExport
-  , compiledEpic    :: Maybe EpicCode
-  , compiledJS      :: Maybe JSCode
-  , compiledCore    :: Maybe CoreRepresentation
-  }
-  deriving (Typeable, Show)
-
 noCompiledRep :: CompiledRepresentation
-noCompiledRep = CompiledRep Nothing Nothing Nothing Nothing Nothing
+noCompiledRep = FFINoBind
 
 -- | Additional information for extended lambdas.
 data ExtLamInfo = ExtLamInfo
@@ -1410,15 +1457,6 @@ defCompiled Defn{theDef = Function {funCompiled  = mcc}} = mcc
 defCompiled Defn{theDef = Primitive{primCompiled = mcc}} = mcc
 defCompiled _ = Nothing
 
-defJSDef :: Definition -> Maybe JSCode
-defJSDef = compiledJS . defCompiledRep
-
-defEpicDef :: Definition -> Maybe EpicCode
-defEpicDef = compiledEpic . defCompiledRep
-
-defCoreDef :: Definition -> Maybe CoreRepresentation
-defCoreDef = compiledCore . defCompiledRep
-
 -- | Are the clauses of this definition delayed?
 defDelayed :: Definition -> Delayed
 defDelayed Defn{theDef = Function{funDelayed = d}} = d
@@ -1592,6 +1630,7 @@ type TempInstanceTable = (InstanceTable , [QName])
 data BuiltinDescriptor
   = BuiltinData (TCM Type) [String]
   | BuiltinDataCons (TCM Type)
+  | BuiltinRecord (TCM Type) [TCM Type]
   | BuiltinPrim String (Term -> TCM ())
   | BuiltinPostulate Relevance (TCM Type)
   | BuiltinUnknown (Maybe (TCM Type)) (Term -> Type -> TCM ())

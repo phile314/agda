@@ -17,7 +17,7 @@ where
 import Data.List
 import qualified Data.Map as M
 
-import Agda.TypeChecking.Monad
+import Agda.TypeChecking.Monad hiding (CoreExpr)
 import Agda.Compiler.UHC.Pragmas.Base
 import Agda.Compiler.UHC.MagicTypes
 

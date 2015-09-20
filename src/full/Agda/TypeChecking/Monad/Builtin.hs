@@ -114,11 +114,14 @@ primInteger, primFloat, primChar, primString, primBool, primTrue, primFalse,
     primRewrite, -- Name of rewrite relation
     primLevel, primLevelZero, primLevelSuc, primLevelMax,
     primIrrAxiom, primFromNat, primFromNeg,
+    -- builtins for FFI
+    primFFIFunImportSpec,
+    primFFIFunImport, primFFIFunImport_MAZ_HS, primFFIFunImport_JS_JS, primFFIFunImport_UHC_Core, primFFIFunImport_RuntimeError,
     -- builtins for reflection:
     primQName, primArgInfo, primArgArgInfo, primArg, primArgArg, primAbs, primAbsAbs, primAgdaTerm, primAgdaTermVar,
     primAgdaTermLam, primAgdaTermExtLam, primAgdaTermDef, primAgdaTermCon, primAgdaTermPi,
     primAgdaTermSort, primAgdaTermLit, primAgdaTermUnsupported,
-    primAgdaTermQuoteGoal, primAgdaTermQuoteTerm, primAgdaTermQuoteContext, primAgdaTermUnquote,
+    primAgdaTermQuoteGoal, primAgdaTermQuoteTerm, primAgdaTermQuoteContext, primAgdaTermUnquote, primAgdaTermForeign,
     primAgdaType, primAgdaTypeEl,
     primHiding, primHidden, primInstance, primVisible,
     primRelevance, primRelevant, primIrrelevant,
@@ -172,6 +175,12 @@ primLevelMax     = getBuiltin builtinLevelMax
 primIrrAxiom     = getBuiltin builtinIrrAxiom
 primFromNat      = getBuiltin builtinFromNat
 primFromNeg      = getBuiltin builtinFromNeg
+primFFIFunImportSpec = getBuiltin builtinFFIFunImportSpec
+primFFIFunImport = getBuiltin builtinFFIFunImport
+primFFIFunImport_MAZ_HS   = getBuiltin builtinFFIFunImport_MAZ_HS
+primFFIFunImport_JS_JS    = getBuiltin builtinFFIFunImport_JS_JS
+primFFIFunImport_UHC_Core = getBuiltin builtinFFIFunImport_UHC_Core
+primFFIFunImport_RuntimeError = getBuiltin builtinFFIFunImport_RuntimeError
 primQName        = getBuiltin builtinQName
 primArg          = getBuiltin builtinArg
 primArgArg       = getBuiltin builtinArgArg
@@ -205,6 +214,7 @@ primAgdaTermQuoteGoal = getBuiltin builtinAgdaTermQuoteGoal
 primAgdaTermQuoteTerm = getBuiltin builtinAgdaTermQuoteTerm
 primAgdaTermQuoteContext = getBuiltin builtinAgdaTermQuoteContext
 primAgdaTermUnquote   = getBuiltin builtinAgdaTermUnquote
+primAgdaTermForeign = getBuiltin builtinAgdaTermForeign
 primAgdaTermUnsupported     = getBuiltin builtinAgdaTermUnsupported
 primAgdaLiteral   = getBuiltin builtinAgdaLiteral
 primAgdaLitNat    = getBuiltin builtinAgdaLitNat
@@ -245,6 +255,8 @@ builtinNat, builtinSuc, builtinZero, builtinNatPlus, builtinNatMinus,
   builtinEquality, builtinRefl, builtinRewrite, builtinLevelMax,
   builtinLevel, builtinLevelZero, builtinLevelSuc, builtinIrrAxiom,
   builtinFromNat, builtinFromNeg,
+  builtinFFIFunImportSpec, builtinFFIFunImport, builtinFFIFunImport_MAZ_HS, builtinFFIFunImport_JS_JS,
+  builtinFFIFunImport_UHC_Core, builtinFFIFunImport_RuntimeError,
   builtinQName, builtinAgdaSort, builtinAgdaSortSet, builtinAgdaSortLit,
   builtinAgdaSortUnsupported, builtinAgdaType, builtinAgdaTypeEl,
   builtinHiding, builtinHidden, builtinInstance, builtinVisible,
@@ -255,6 +267,7 @@ builtinNat, builtinSuc, builtinZero, builtinNatPlus, builtinNatMinus,
   builtinAgdaTermDef, builtinAgdaTermCon, builtinAgdaTermPi,
   builtinAgdaTermSort, builtinAgdaTermLit, builtinAgdaTermUnsupported,
   builtinAgdaTermQuoteGoal, builtinAgdaTermQuoteContext, builtinAgdaTermQuoteTerm, builtinAgdaTermUnquote,
+  builtinAgdaTermForeign,
   builtinAgdaLiteral, builtinAgdaLitNat, builtinAgdaLitFloat,
   builtinAgdaLitChar, builtinAgdaLitString, builtinAgdaLitQName,
   builtinAgdaFunDef, builtinAgdaFunDefCon, builtinAgdaClause,
@@ -307,6 +320,12 @@ builtinLevelSuc                      = "LEVELSUC"
 builtinIrrAxiom                      = "IRRAXIOM"
 builtinFromNat                       = "FROMNAT"
 builtinFromNeg                       = "FROMNEG"
+builtinFFIFunImportSpec              = "FFIFUNIMPORTSPEC"
+builtinFFIFunImport                  = "FFIFUNIMPORT"
+builtinFFIFunImport_MAZ_HS           = "FFIFUNIMPORTMAZHS"
+builtinFFIFunImport_JS_JS            = "FFIFUNIMPORTJSJS"
+builtinFFIFunImport_UHC_Core         = "FFIFUNIMPORTUHCCORE"
+builtinFFIFunImport_RuntimeError     = "FFIFUNIMPORTRUNTIMEERROR"
 builtinQName                         = "QNAME"
 builtinAgdaSort                      = "AGDASORT"
 builtinAgdaSortSet                   = "AGDASORTSET"
@@ -340,6 +359,7 @@ builtinAgdaTermQuoteGoal             = "AGDATERMQUOTEGOAL"
 builtinAgdaTermQuoteContext          = "AGDATERMQUOTECONTEXT"
 builtinAgdaTermQuoteTerm             = "AGDATERMQUOTETERM"
 builtinAgdaTermUnquote               = "AGDATERMUNQUOTE"
+builtinAgdaTermForeign               = "AGDATERMFOREIGN"
 builtinAgdaTermUnsupported           = "AGDATERMUNSUPPORTED"
 builtinAgdaLiteral                   = "AGDALITERAL"
 builtinAgdaLitNat                    = "AGDALITNAT"
