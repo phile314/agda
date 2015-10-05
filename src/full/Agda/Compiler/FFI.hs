@@ -22,16 +22,19 @@ import Agda.Utils.Impossible
 
 #include "undefined.h"
 
+levelKit :: TCM QName
+levelKit = do
+  Def lvl _ <- primLevel
+  return lvl
 
-
-
---checkFFIFunImport' :: FFIWay -> Type -> FFIFunImport
-
-
+dropSetLevelArgs :: Type -> TTerm -> TCM TTerm
+dropSetLevelArgs ty t = do
+  lvlKit <- levelKit
+  dropSetLevelArgs' lvlKit ty t
 
 -- | Creates a wrapper for FFI calls, discarding level and set arguments.
-dropSetLevelArgs :: Type -> TTerm -> TCM TTerm
-dropSetLevelArgs t body = wrapType body t
+dropSetLevelArgs' :: QName -> Type -> TTerm -> TCM TTerm
+dropSetLevelArgs' lvlNm t body = wrapType body t
   where
     wrapArgs body = foldM wrapTerm body . map unArg
     wrapType body = wrapTerm body . unEl
@@ -47,14 +50,14 @@ dropSetLevelArgs t body = wrapType body t
           b' <- if isBinderUsed b  -- Andreas, 2012-04-03.  Q: could we rely on Abs/NoAbs instead of again checking freeness of variable?
             then do
               underAbstraction a b $ \b ->
-                wrapType (TVar 0) b
-            else wrapType (TVar 0) (noabsApp __IMPOSSIBLE__ b)
+                wrapType body b
+            else wrapType body (noabsApp __IMPOSSIBLE__ b)
           case unEl (unDom a) of
-            Level{} -> return $ TLam b'
+            Def nm _ | nm == lvlNm -> return $ TLam b'
             Sort{} -> return $ TLam b'
             _ -> do
               a' <- wrapType (TVar 0) (unDom a)
-              return $ TLam (TLet a' $ TApp b' [TVar 0])
+              return $ TLam (TApp b' [a'])
         Con c args -> return body
         Lit{}      -> return body
         Level{}    -> __IMPOSSIBLE__

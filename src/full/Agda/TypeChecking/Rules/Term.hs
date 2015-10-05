@@ -75,6 +75,7 @@ import Agda.TypeChecking.Substitute
 import Agda.TypeChecking.Telescope
 import Agda.TypeChecking.Rules.LHS (checkLeftHandSide, LHSResult(..))
 import Agda.TypeChecking.Unquote
+import qualified Agda.TypeChecking.Rules.FFI as FFI
 
 import {-# SOURCE #-} Agda.TypeChecking.Empty (isEmptyType)
 import {-# SOURCE #-} Agda.TypeChecking.Rules.Decl (checkSectionApplication)
@@ -1062,7 +1063,7 @@ checkApplication hd args e t = do
     A.ForeignCall _
       | [a1, a2] <- args -> do
           foreignCall (namedArg a1) (namedArg a2) $ \e -> do
-            reportSDoc "tc.ffi" 20 $ text "C1:" <+> (text $ show e) <+> text "with type" <+> (text $ show t)
+            reportSDoc "tc.ffi" 20 $ text "C1:" <+> (text $ show e) <+> text "with type" <+> prettyTCM t --(text $ show t)
             checkExpr e t
       | a1 : a2 : args <- args -> do
           foreignCall (namedArg a1) (namedArg a2) $ \e -> do
@@ -1070,7 +1071,7 @@ checkApplication hd args e t = do
             checkHeadApplication e t e args
       where
         foreignCall :: A.Expr -> A.Expr -> (A.Expr -> TCM Term) -> TCM Term
-        foreignCall qv fty cont = error "TODO" {-do
+        foreignCall qv fty cont = do
           qv' <- checkExpr qv =<< el primFFIFunImportSpec
           mv <- runUnquoteM $ unquote qv'
           case mv of
@@ -1098,16 +1099,16 @@ checkApplication hd args e t = do
               -- we can just lift it to the top-level without
               -- actually doing any lambda-lifting
               inTopContext $ addConstant aux
-                $ (defaultDefn defaultArgInfo aux fty Axiom)
-                { defCompiledRep = FFIFunImport v
-                }
+                $ (defaultDefn (setRelevance Relevant defaultArgInfo) aux fty Axiom)
+--                { defCompiledRep = FFIFunImport v
+--                }
 --              solveSizeConstraints
 --              wakeupConstraints_
-
+              FFI.checkFFIFunImportSpec aux fty v
 
               reportSDoc "tc.ffi" 10 $ text "continuing"
               t <- cont (A.Def aux)
-              return t-}
+              return t
 
     -- Subcase: defined symbol or variable.
     _ -> checkHeadApplication e t hd args

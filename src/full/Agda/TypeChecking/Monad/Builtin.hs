@@ -116,7 +116,8 @@ primInteger, primFloat, primChar, primString, primBool, primTrue, primFalse,
     primIrrAxiom, primFromNat, primFromNeg,
     -- builtins for FFI
     primFFIFunImportSpec,
-    primFFIFunImport, primFFIFunImport_MAZ_HS, primFFIFunImport_JS_JS, primFFIFunImport_UHC_Core, primFFIFunImport_RuntimeError,
+    primFFIFunImport, primFFIFunImport_MAZ_HS, primFFIFunImport_JS_JS, primFFIFunImport_UHC_Core, primFFIFunImport_UHC_HS,
+    primFFIFunImport_RuntimeError,
     -- builtins for reflection:
     primQName, primArgInfo, primArgArgInfo, primArg, primArgArg, primAbs, primAbsAbs, primAgdaTerm, primAgdaTermVar,
     primAgdaTermLam, primAgdaTermExtLam, primAgdaTermDef, primAgdaTermCon, primAgdaTermPi,
@@ -180,6 +181,7 @@ primFFIFunImport = getBuiltin builtinFFIFunImport
 primFFIFunImport_MAZ_HS   = getBuiltin builtinFFIFunImport_MAZ_HS
 primFFIFunImport_JS_JS    = getBuiltin builtinFFIFunImport_JS_JS
 primFFIFunImport_UHC_Core = getBuiltin builtinFFIFunImport_UHC_Core
+primFFIFunImport_UHC_HS   = getBuiltin builtinFFIFunImport_UHC_HS
 primFFIFunImport_RuntimeError = getBuiltin builtinFFIFunImport_RuntimeError
 primQName        = getBuiltin builtinQName
 primArg          = getBuiltin builtinArg
@@ -256,7 +258,7 @@ builtinNat, builtinSuc, builtinZero, builtinNatPlus, builtinNatMinus,
   builtinLevel, builtinLevelZero, builtinLevelSuc, builtinIrrAxiom,
   builtinFromNat, builtinFromNeg,
   builtinFFIFunImportSpec, builtinFFIFunImport, builtinFFIFunImport_MAZ_HS, builtinFFIFunImport_JS_JS,
-  builtinFFIFunImport_UHC_Core, builtinFFIFunImport_RuntimeError,
+  builtinFFIFunImport_UHC_Core, builtinFFIFunImport_UHC_HS, builtinFFIFunImport_RuntimeError,
   builtinQName, builtinAgdaSort, builtinAgdaSortSet, builtinAgdaSortLit,
   builtinAgdaSortUnsupported, builtinAgdaType, builtinAgdaTypeEl,
   builtinHiding, builtinHidden, builtinInstance, builtinVisible,
@@ -325,6 +327,7 @@ builtinFFIFunImport                  = "FFIFUNIMPORT"
 builtinFFIFunImport_MAZ_HS           = "FFIFUNIMPORTMAZHS"
 builtinFFIFunImport_JS_JS            = "FFIFUNIMPORTJSJS"
 builtinFFIFunImport_UHC_Core         = "FFIFUNIMPORTUHCCORE"
+builtinFFIFunImport_UHC_HS           = "FFIFUNIMPORTUHCHS"
 builtinFFIFunImport_RuntimeError     = "FFIFUNIMPORTRUNTIMEERROR"
 builtinQName                         = "QNAME"
 builtinAgdaSort                      = "AGDASORT"

@@ -54,7 +54,8 @@ ccToTreeless funNm cc = do
   reportSDoc "treeless.opt.n+k" 30 $ text "-- after n+k translation:" $$ nest 2 (prettyPure body)
   body <- simplifyTTerm body
   reportSDoc "treeless.opt.simpl" 30 $ text "-- after simplification"  $$ nest 2 (prettyPure body)
-  body <- eraseTerms body
+  -- TODO fix relevance annotations of generated Internal FFI axioms
+--  body <- eraseTerms body
   reportSDoc "treeless.opt.erase" 30 $ text "-- after erasure"  $$ nest 2 (prettyPure body)
   return body
 

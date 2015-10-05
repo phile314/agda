@@ -17,11 +17,18 @@ data LList {l} (A : Set l) : Set l where
 {-# COMPILED_DATA_UHC LList __LIST__ __NIL__ __CONS__ #-}
 
 
-hhead : {-(a : Level) ->-} {A : Set0} -> LList A -> A
+hhead : {a : Level} -> {A : Set a} -> LList A -> A
 hhead = foreign (record
-    { Spec-MAZ-HS = RuntimeError
+    { Spec-MAZ-Native = RuntimeError
     ; Spec-JS-JS = RuntimeError
-    ; Spec-UHC-HS = UHC-Core "(\\_ -> UHC.Base.head)"}) ({A : Set0} -> LList A -> A)
+--    ; Spec-UHC-Native = UHC-Core "(\\_ -> UHC.Base.head)"})
+    ; Spec-UHC-Native = UHC-HS "UHC.Base.head"
+    })
+    ({a : Level} -> {A : Set a} -> LList A -> A)
+
+
+--postulate hhead : {A : Set0} -> LList A -> A
+-- {-# COMPILED_UHC hhead (\_ -> UHC.Base.head) #-}
 
 str : LList Char
 str = 'a' ∷ ('b' ∷ ('c' ∷ ('d' ∷ [])))

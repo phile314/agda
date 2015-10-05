@@ -30,6 +30,13 @@ import Agda.Utils.Impossible
 
 #include "undefined.h"
 
+checkFFIFunImportSpec ::
+    QName
+  -> Type
+  -> FFIFunImportSpec
+  -> TCM ()
+checkFFIFunImportSpec q ty imp = do
+  mapM_ (checkFFIFunImport q ty) (Map.elems imp)
 
 checkFFIFunImport ::
      QName -- ^ name of the axiom associated with this fun import
@@ -183,8 +190,8 @@ instance Unquote (Maybe (CompileTarget, FFIFunImport)) where
             (\x -> Just (Target_MAZ_Native, FunImp_MAZ_HS x)) <$> unquoteNString x)
           , (c `isCon` primFFIFunImport_JS_JS,
             (\x -> Just (Target_JS_JS, FunImp_JS_JS x)) <$> unquoteNString x)
---          , (c `isCon` primFFIFunImport_UHC_HS,
---            (\x -> Just (Target_UHC_Native, FunImp_UHC_HS x)) <$> unquoteNString x)
+          , (c `isCon` primFFIFunImport_UHC_HS,
+            (\x -> Just (Target_UHC_Native, FunImp_UHC_HS x)) <$> unquoteNString x)
           , (c `isCon` primFFIFunImport_UHC_Core,
             (\x -> Just (Target_UHC_Native, FunImp_UHC_Core x)) <$> unquoteNString x)
           ]

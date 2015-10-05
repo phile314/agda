@@ -82,10 +82,12 @@ coreBuiltins = map (\ (x, z) -> BuiltinInfo x z)
   , (builtinIO                 |-> builtinPostulate (tset --> tset))
   , (builtinFFIFunImportSpec   |-> BuiltinRecord tset (replicate 3 tffifunimp))
   , (builtinFFIFunImport       |-> BuiltinData tset [builtinFFIFunImport_MAZ_HS, builtinFFIFunImport_JS_JS
-                                                    , builtinFFIFunImport_UHC_Core])
+                                                    , builtinFFIFunImport_UHC_Core, builtinFFIFunImport_RuntimeError
+                                                    , builtinFFIFunImport_UHC_HS])
   , (builtinFFIFunImport_MAZ_HS   |-> BuiltinDataCons (tstring --> tffifunimp))
   , (builtinFFIFunImport_JS_JS    |-> BuiltinDataCons (tstring --> tffifunimp))
   , (builtinFFIFunImport_UHC_Core |-> BuiltinDataCons (tstring --> tffifunimp))
+  , (builtinFFIFunImport_UHC_HS   |-> BuiltinDataCons (tstring --> tffifunimp))
   , (builtinFFIFunImport_RuntimeError |-> BuiltinDataCons tffifunimp)
   , (builtinAgdaSort           |-> BuiltinData tset [builtinAgdaSortSet, builtinAgdaSortLit, builtinAgdaSortUnsupported])
   , (builtinAgdaType           |-> BuiltinData tset [builtinAgdaTypeEl])

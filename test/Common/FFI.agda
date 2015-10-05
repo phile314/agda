@@ -18,12 +18,14 @@ data FunImport : Set where
   MAZ-HS : HSCode -> FunImport
   JS-JS : JSCode -> FunImport
   UHC-Core : UHC-HS-Name -> FunImport
+  UHC-HS : UHC-HS-Name -> FunImport
   RuntimeError : FunImport
 --  UHC-Core : UHC-Core-Expr -> FunImport
 {-# BUILTIN FFIFUNIMPORT FunImport #-}
-{-# BUILTIN FFIFUNIMPORTMAZHS Imp-MAZ-HS #-}
-{-# BUILTIN FFIFUNIMPORTJSJS  Imp-JS-JS #-}
-{-# BUILTIN FFIFUNIMPORTUHCCORE Imp-UHC-Core #-}
+{-# BUILTIN FFIFUNIMPORTMAZHS MAZ-HS #-}
+{-# BUILTIN FFIFUNIMPORTJSJS  JS-JS #-}
+{-# BUILTIN FFIFUNIMPORTUHCCORE UHC-Core #-}
+{-# BUILTIN FFIFUNIMPORTUHCHS UHC-HS #-}
 {-# BUILTIN FFIFUNIMPORTRUNTIMEERROR RuntimeError #-}
 -- {-# BUILTIN FFIFUNIMPORTUHCCORE UHC-Core #-}
 
@@ -31,5 +33,6 @@ data FunImport : Set where
 record FunImportSpec : Set where
   constructor FFICall
   field
-    Spec-MAZ-HS Spec-JS-JS Spec-UHC-Core : FunImport
+    Spec-MAZ-Native Spec-JS-JS Spec-UHC-Native : FunImport
 {-# BUILTIN FFIFUNIMPORTSPEC FunImportSpec #-}
+

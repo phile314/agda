@@ -102,7 +102,7 @@ translateDefn (n, defini) = do
     d@(Datatype {}) -> do
 
         unless (isJust (getFFITypeBind Way_UHC_Core compRep) || Just n == (nameOfInf <$> kit)) $ do
-          lift $ addMetaData n (mkMetaData crName)
+          addMetaData n (mkMetaData crName)
 
         vars <- replicateM (dataPars d + dataIxs d) freshLocalName
         addExports [crName]
@@ -161,11 +161,11 @@ translateDefn (n, defini) = do
               FunImp_UHC_Core x -> (x, return)
               _ -> __IMPOSSIBLE__
 
-        lift $ addExports [crName]
+        addExports [crName]
 
 
-        top <- lift getCurrentModule
-        fQnm <- qualify top <$> (lift $ lift $ freshNoName_)
+        top <- getCurrentModule
+        fQnm <- qualify top <$> (lift $ freshNoName_)
         fCnm <- freshLocalName
 
         x' <- case coreExprToCExpr x of
@@ -174,7 +174,7 @@ translateDefn (n, defini) = do
           Left err -> internalError $ "Invalid COMPILED_UHC pragma value: " ++ err
           Right y -> return y
 
-        wrapperT <- lift $ lift $ mkWrapper (C.TDef fQnm)
+        wrapperT <- lift $ mkWrapper (C.TDef fQnm)
         wrapper <- withNames [(fQnm, fCnm)] $ runTT $ compileTerm wrapperT
 
         let ffiFun = mkBind1 fCnm x'
