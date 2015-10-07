@@ -8,6 +8,7 @@ open import Common.Char
 open import Common.FFI
 open import Common.Level
 open import Common.List
+open import Common.Bool
 
 data LList {l} (A : Set l) : Set l where
   [] : LList A
@@ -26,6 +27,13 @@ hhead = foreign (record
     })
     ({a : Level} -> {A : Set a} -> LList A -> A)
 
+
+test = foreign (record
+    { Spec-MAZ-Native = RuntimeError
+    ; Spec-JS-JS = RuntimeError
+    ; Spec-UHC-Native = UHC-HS "UHC.Base.head"
+    })
+    (({a : Level} -> {A : Set a} -> A -> A) -> Bool)
 
 --postulate hhead : {A : Set0} -> LList A -> A
 -- {-# COMPILED_UHC hhead (\_ -> UHC.Base.head) #-}

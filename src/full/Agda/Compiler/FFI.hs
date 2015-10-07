@@ -17,6 +17,7 @@ import Agda.TypeChecking.Pretty
 import Agda.TypeChecking.Substitute
 import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Free
+import Agda.Compiler.Treeless.Subst
 
 import Agda.Utils.Impossible
 
@@ -56,18 +57,22 @@ dropSetLevelArgs' lvlNm t body = wrapType CCovariant body t
                 | otherwise -> return body
         Sort{}  | c == CCovariant -> return (TApp body [TSort])
                 | otherwise -> __IMPOSSIBLE__
-        Pi a b -> do
-          b' <- if isBinderUsed b  -- Andreas, 2012-04-03.  Q: could we rely on Abs/NoAbs instead of again checking freeness of variable?
-            then do
-              underAbstraction a b $ \b ->
-                wrapType c body b
-            else wrapType c body (noabsApp __IMPOSSIBLE__ b)
-          case unEl (unDom a) of
-            Def nm _ | nm == lvlNm -> return $ TLam b'
-            Sort{} -> return $ TLam b'
+        Pi a b | c == CContravariant -> do
+          (lam, body') <- case unEl (unDom a) of
+            Def nm _ | nm == lvlNm -> return (id, TApp body [TUnit])
+            Sort{} -> return (id, TApp body [TSort])
             _ -> do
               a' <- wrapType (invertCContext c) (TVar 0) (unDom a)
-              return $ TLam (TApp b' [a'])
+              return (TLam, TApp (wk body) [a'])
+          lam <$> checkPiRight c body' a b
+        Pi a b | otherwise -> do
+          body' <- case unEl (unDom a) of
+            Def nm _ | nm == lvlNm -> return $ wk body
+            Sort{} -> return $ wk body
+            _ -> do
+              a' <- wrapType (invertCContext c) (TVar 0) (unDom a)
+              return $ TApp (wk body) [a']
+          TLam <$> checkPiRight c body' a b
         Con c args -> return body
         Lit{}      -> return body
         Level{}    -> __IMPOSSIBLE__
@@ -75,5 +80,11 @@ dropSetLevelArgs' lvlNm t body = wrapType CCovariant body t
         MetaV{}    -> __IMPOSSIBLE__
         DontCare{} -> __IMPOSSIBLE__
         Lam{}      -> __IMPOSSIBLE__
-
+    wk = applySubst (wkS 1 idS)
+    checkPiRight c body a b = do
+      if isBinderUsed b  -- Andreas, 2012-04-03.  Q: could we rely on Abs/NoAbs instead of again checking freeness of variable?
+        then do
+          underAbstraction a b $ \b ->
+            wrapType c body b
+        else wrapType c body (noabsApp __IMPOSSIBLE__ b)
 
