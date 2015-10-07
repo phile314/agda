@@ -437,6 +437,8 @@ instance Pretty Pragma where
       hsep [ text "COMPILED_JS", pretty x, text e ]
     pretty (CompiledUHCPragma _ x e) =
       hsep [ text "COMPILED_UHC", pretty x, text e ]
+    pretty (CompiledTypeUHCPragma _ x) =
+      hsep [ text "COMPILED_TYPE_UHC", pretty x ]
     pretty (CompiledDataUHCPragma _ x crd crcs) =
       hsep $ [ text "COMPILED_DATA_UHC", pretty x] ++ map text (crd : crcs)
     pretty (NoSmashingPragma _ i) =

@@ -1141,7 +1141,7 @@ data FFIFunImport'
   = FunImp_MAZ_HS   HaskellCode
   | FunImp_JS_JS    JSCode
   | FunImp_UHC_Core CR.CoreExpr
-  | FunImp_UHC_HS   CR.CoreExpr
+  | FunImp_UHC_HS   CR.HsName
   deriving (Typeable, Show)
 
 data FFITypeBind'

@@ -644,6 +644,13 @@ checkPragma r p =
           case theDef def of
             Axiom{} -> FFI.checkFFIFunImport x (defType def) (FFI.FunImp_UHC_Core cr)
             _ -> typeError $ GenericError "COMPILED_UHC directive only works on postulates" -- only allow postulates for the time being
+        A.CompiledTypeUHCPragma x -> do
+          def <- getConstInfo x
+          case theDef def of
+            Axiom{} -> -- the type binding does not matter for postulates, as the UHC backend erases types, so just use a dummy name!
+                       addFFITypeBind x Way_UHC_Core (TyBind_UHC_Core (CTNormal "COMPILED_TYPE"))
+            _       -> typeError $ GenericError
+                        "COMPILED_TYPE directive only works on postulates"
         A.CompiledDataUHCPragma x crd crcs -> do
           -- TODO mostly copy-paste from the CompiledDataPragma, should be refactored into a seperate function
           def <- getConstInfo x

@@ -133,7 +133,8 @@ import Agda.Utils.Tuple
     'COMPILED_EPIC' { TokKeyword KwCOMPILED_EPIC $$ }
     'COMPILED_JS'   { TokKeyword KwCOMPILED_JS $$ }
     'COMPILED_UHC'  { TokKeyword KwCOMPILED_UHC $$ }
-    'COMPILED_DATA_UHC'   { TokKeyword KwCOMPILED_DATA_UHC $$ }
+    'COMPILED_TYPE_UHC' { TokKeyword KwCOMPILED_TYPE_UHC $$ }
+    'COMPILED_DATA_UHC' { TokKeyword KwCOMPILED_DATA_UHC $$ }
     'foreign'       { TokKeyword KwForeign $$ }
     'NO_SMASHING'   { TokKeyword KwNO_SMASHING $$ }
     'STATIC'        { TokKeyword KwSTATIC $$ }
@@ -250,6 +251,7 @@ Token
     | 'COMPILED_EPIC'{ TokKeyword KwCOMPILED_EPIC $1 }
     | 'COMPILED_JS'  { TokKeyword KwCOMPILED_JS $1 }
     | 'COMPILED_UHC' { TokKeyword KwCOMPILED_UHC $1 }
+    | 'COMPILED_TYPE_UHC' { TokKeyword KwCOMPILED_TYPE_UHC $1 }
     | 'COMPILED_DATA_UHC' {TokKeyword KwCOMPILED_DATA_UHC $1 }
     | 'foreign'      { TokKeyword KwForeign $1 }
     | 'NO_SMASHING'  { TokKeyword KwNO_SMASHING $1 }
@@ -1330,6 +1332,7 @@ DeclarationPragma
   | CompiledEpicPragma       { $1 }
   | CompiledJSPragma         { $1 }
   | CompiledUHCPragma        { $1 }
+  | CompiledTypeUHCPragma    { $1 }
   | CompiledDataUHCPragma    { $1 }
   | NoSmashingPragma         { $1 }
   | StaticPragma             { $1 }
@@ -1402,6 +1405,11 @@ CompiledUHCPragma :: { Pragma }
 CompiledUHCPragma
   : '{-#' 'COMPILED_UHC' PragmaQName PragmaStrings '#-}'
     { CompiledUHCPragma (getRange ($1,$2,$3,$5)) $3 (unwords $4) }
+
+CompiledTypeUHCPragma :: { Pragma }
+CompiledTypeUHCPragma
+  : '{-#' 'COMPILED_TYPE_UHC' PragmaQName '#-}'
+    { CompiledTypeUHCPragma (getRange ($1,$2,$3,$4)) $3 }
 
 CompiledDataUHCPragma :: { Pragma }
 CompiledDataUHCPragma

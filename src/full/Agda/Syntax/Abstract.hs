@@ -171,6 +171,7 @@ data Pragma
   | CompiledEpicPragma QName String
   | CompiledJSPragma QName String
   | CompiledUHCPragma QName String
+  | CompiledTypeUHCPragma QName
   | CompiledDataUHCPragma QName String [String]
   | NoSmashingPragma QName
   | StaticPragma QName

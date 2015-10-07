@@ -834,6 +834,9 @@ instance ToConcrete RangeAndPragma C.Pragma where
     A.CompiledUHCPragma x cr -> do
       x <- toConcrete x
       return $ C.CompiledUHCPragma r x cr
+    A.CompiledTypeUHCPragma x -> do
+      x <- toConcrete x
+      return $ C.CompiledTypeUHCPragma r x
     A.CompiledDataUHCPragma x crd crcs -> do
       x <- toConcrete x
       return $ C.CompiledDataUHCPragma r x crd crcs
