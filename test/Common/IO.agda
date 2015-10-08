@@ -15,6 +15,7 @@ postulate
 -- MAlonzo
 {-# IMPORT Common.FFI #-}
 {-# COMPILED_TYPE IO Common.FFI.AgdaIO #-}
+{-# COMPILED_TYPE_UHC IO #-}
 
 infixl 1 _>>=_
 

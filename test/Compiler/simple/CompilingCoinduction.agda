@@ -12,6 +12,7 @@ postulate
   IO : Set → Set
 
 {-# COMPILED_TYPE IO IO #-}
+{-# COMPILED_TYPE_UHC IO #-}
 {-# BUILTIN IO IO #-}
 
 postulate

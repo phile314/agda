@@ -7,6 +7,7 @@ postulate
 
 {-# BUILTIN CHAR Char #-}
 {-# COMPILED_TYPE Char Char #-}
+{-# COMPILED_TYPE_UHC Char #-}
 
 private
   primitive

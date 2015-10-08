@@ -34,6 +34,7 @@ import Agda.TypeChecking.Primitive
 import Agda.TypeChecking.Reduce
 import Agda.TypeChecking.Substitute
 import Agda.TypeChecking.Rules.Term ( checkExpr , inferExpr )
+import Agda.Compiler.UHC.Pragmas.Base (CoreType (CTMagic))
 
 import {-# SOURCE #-} Agda.TypeChecking.Rules.Builtin.Coinduction
 import {-# SOURCE #-} Agda.TypeChecking.Rewriting
@@ -431,6 +432,7 @@ bindBuiltinNat t = do
           tnat = el primNat
           rerange = setRange (getRange nat)
       addFFITypeBind nat Way_MAZ_HS (TyBind_MAZ_HS "Integer")
+      addFFITypeBind nat Way_UHC_Core (TyBind_UHC_Core $ CTMagic "INTEGER")
       bindBuiltinInfo (BuiltinInfo builtinZero $ BuiltinDataCons tnat)
                       (A.Con $ AmbQ [rerange zero])
       bindBuiltinInfo (BuiltinInfo builtinSuc  $ BuiltinDataCons (tnat --> tnat))
