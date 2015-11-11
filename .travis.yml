@@ -141,7 +141,7 @@ install:
 
   - case $TEST in
       "non-require-stdlib" | "require-stdlib")
-        cabal build -v2 --builddir=$BUILD_DIR &&
+        travis_wait cabal build -v2 --builddir=$BUILD_DIR &&
         cabal copy &&
         cabal register
         ;;
@@ -179,7 +179,7 @@ install:
        cabal install happy --constraint=transformers==0.3.0.0 &&
        cabal install --enable-tests --avoid-reinstalls --only-dependencies --constraint=transformers==0.3.0.0 &&
        cabal configure -v2 --builddir=$BUILD_DIR --enable-tests --constraint=transformers==0.3.0.0 &&
-       cabal build -v2 --builddir=$BUILD_DIR;
+       travis_wait cabal build -v2 --builddir=$BUILD_DIR;
     fi
 
 ##############################################################################
@@ -201,7 +201,7 @@ install:
        cabal install happy &&
        cabal install --enable-tests --avoid-reinstalls --only-dependencies &&
        cabal configure -v2 --enable-tests --builddir=$BUILD_DIR -f -cpphs &&
-       cabal build -v2 --builddir=$BUILD_DIR;
+       travis_wait cabal build -v2 --builddir=$BUILD_DIR;
     fi
 
 ##############################################################################
