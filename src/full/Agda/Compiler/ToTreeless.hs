@@ -301,6 +301,7 @@ substTerm term = normaliseStatic term >>= \ term ->
     I.Lit l -> return $ C.TLit l
     I.Level _ -> return C.TUnit
     I.Def q es -> do
+      q <- defName <$> lift (getConstInfo q)
       let args = fromMaybe __IMPOSSIBLE__ $ I.allApplyElims es
       maybeInlineDef q args
     I.Con c args -> do
