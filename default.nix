@@ -76,7 +76,9 @@ mkDerivation {
     $out/bin/agda-mode compile
     # copy user manual
     mkdir -p $out/share/doc/Agda
-    mv doc/user-manual/_build/html $out/share/doc/Agda/
+    cp -r doc/user-manual/_build/html $out/share/doc/Agda/
+
+    echo "doc user-manual $out/share/doc/Agda/html" >> $out/nix-support/hydra-build-products
   '';
 
   homepage = "http://wiki.portal.chalmers.se/agda/";
