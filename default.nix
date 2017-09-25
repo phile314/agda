@@ -12,14 +12,14 @@
 # To enter the development environment, simply call `nix-shell shell.nix`.
 #
 
-{ mkDerivation, alex, array, base, binary, boxes, bytestring
+{ mkDerivation, alex, array, base, binary, blaze-html, boxes, bytestring
 , containers, cpphs, data-hash, deepseq, directory, edit-distance
 , emacs, equivalence, filepath, geniplate-mirror, happy, hashable
 , hashtables, haskeline, haskell-src-exts, mtl, parallel, pretty
 , process, process-extras, QuickCheck, stdenv, strict, tasty
 , regex-tdfa, regex-tdfa-text, filemanip, fail
 , tasty-silver, tasty-hunit, template-haskell, temporary, text, time
-, transformers, transformers-compat, unordered-containers, xhtml
+, transformers, transformers-compat, unordered-containers, uri-encode, xhtml
 , murmur-hash, ieee754, gitrev
 , zlib, tasty-quickcheck, monadplus, EdisonCore, EdisonAPI
 , text-icu
@@ -42,11 +42,11 @@ in rec {
     isLibrary = true;
     isExecutable = true;
     buildDepends = [
-      array base binary boxes bytestring containers data-hash deepseq
+      array base binary blaze-html boxes bytestring containers data-hash deepseq
       directory edit-distance equivalence filepath geniplate-mirror
       hashable hashtables haskeline haskell-src-exts mtl parallel pretty
       process QuickCheck strict template-haskell text time transformers filemanip
-      transformers-compat unordered-containers xhtml zlib tasty-quickcheck
+      transformers-compat unordered-containers uri-encode xhtml zlib tasty-quickcheck
       monadplus EdisonCore EdisonAPI murmur-hash ieee754 gitrev text-icu
     ] ++ (if stdenv.lib.versionOlder "8.0" ghc.version then [] else [ fail ]);
     testDepends = [
